@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from globalVariables import *
+from .globalVariables import *
 
-from processing_umep.functions.URock import DataUtil
-from processing_umep.functions.URock import loadData
+from . import DataUtil
+from . import loadData
 
 import string
 
@@ -128,7 +128,7 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
         """
         DROP TABLE IF EXISTS {0}, {1};
         CREATE TABLE {0}
-            AS SELECT  {2}, ID, EXPLOD_ID AS {6}
+            AS SELECT  ST_NORMALIZE(ST_MAKEVALID({2})) AS {2}, ID, EXPLOD_ID AS {6}
             FROM ST_EXPLODE('(SELECT    ST_COLLECTIONEXTRACT(ST_INTERSECTION(a.{2}, 
                                                                              b.{2}), 
                                                              3) AS {2},
@@ -136,7 +136,7 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
                               FROM {3} AS a, {4} AS b)')
             WHERE NOT ST_ISEMPTY({2});
         CREATE TABLE {1}
-            AS SELECT {2}, ID, EXPLOD_ID AS {6}
+            AS SELECT ST_NORMALIZE(ST_MAKEVALID({2})) AS {2}, ID, EXPLOD_ID AS {6}
             FROM ST_EXPLODE('(SELECT ST_COLLECTIONEXTRACT( ST_INTERSECTION(a.{2}, 
                                                                            ST_DIFFERENCE(ST_BUFFER(b.{2}, 
                                                                                                    {5}), 
@@ -225,6 +225,7 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
         DROP TABLE IF EXISTS {grid_ini2};
         CREATE TABLE {grid_ini2}
             AS SELECT   a.ID,
+                        b.{ID_UPSTREAM},
                         ST_Y(a.{GEOM_FIELD})-b.YMIN AS {D_PARK_OUTPUT},
                         b.YMAX-ST_Y(a.{GEOM_FIELD}) AS {D_PARK_INPUT},
             FROM {grid_ini} AS a LEFT JOIN {rec_coord_park} AS b
@@ -245,6 +246,7 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
         DROP TABLE IF EXISTS {grid_ini3};
         CREATE TABLE {grid_ini3}
             AS SELECT   a.ID,
+                        b.{ID_UPSTREAM},
                         b.YMAX-ST_Y(a.{GEOM_FIELD}) AS {D_PARK},
             FROM {grid_ini} AS a LEFT JOIN {rec_coord_city} AS b
             ON a.ID_COL = b.ID
@@ -267,6 +269,7 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
         DROP TABLE IF EXISTS {grid_ini4};
         CREATE TABLE {grid_ini4}
             AS SELECT   a.*,
+                        COALESCE(b.{ID_UPSTREAM}, 1) AS {ID_UPSTREAM},
                         COALESCE(b.{D_PARK_INPUT}, {DEFAULT_D_PARK_INPUT}) AS {D_PARK_INPUT},
                         COALESCE(b.{D_PARK_OUTPUT}, {DEFAULT_D_PARK_OUTPUT}) AS {D_PARK_OUTPUT}
             FROM {grid_ini} AS a LEFT JOIN {grid_ini2} AS b
@@ -278,11 +281,15 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
                                     DataUtil.createIndex(tableName=grid_ini4, 
                                                          fieldName="ID",
                                                          isSpatial=False)))
+    all_cols = DataUtil.getColumns(cursor = cursor,
+                                   tableName = grid_ini4)
+    all_cols.remove(ID_UPSTREAM)
     cursor.execute(
         f""" 
         DROP TABLE IF EXISTS {grid};
         CREATE TABLE {grid}
-            AS SELECT   a.*,
+            AS SELECT   a.{", a.".join(all_cols)},
+                        COALESCE(b.{ID_UPSTREAM}, a.{ID_UPSTREAM}) AS {ID_UPSTREAM},
                         COALESCE(b.{D_PARK}, {DEFAULT_D_PARK}) AS {D_PARK}
             FROM {grid_ini4} AS a LEFT JOIN {grid_ini3} AS b
             ON a.ID = b.ID;
@@ -387,7 +394,9 @@ def loadInputData(cursor, parkBoundaryFilePath, parkGroundFilePath,
     
     
 def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
-                    build_height, build_age, build_renovation):
+                    build_height, build_age, build_renovation, build_wwr,
+                    default_build_height, default_build_age,
+                    default_build_renov, default_build_wwr):
     """ Modify or fill input data (buildings as well as park ground and canopy layers)
     to have all needed data for the next steps.
 
@@ -408,6 +417,16 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                 Name of the building age field
             build_renovation: String
                 Name of the building renovation field
+            build_wwr: String
+                Name of the building windows-to-wall ratio field
+            default_build_height: int
+                Default building height value
+            default_build_age: int
+                Default building age (construction year)
+            default_build_renov: boolean
+                Whether or not by default a building is considered as renovated
+            default_build_wwr: float
+                Default building windows-to-wall ratio
             
         
 		Returns
@@ -474,17 +493,21 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
     
     # Fill missing building age and renovation with missing values
     if build_height and build_height != "":
-        sql_height = f"COALESCE({build_height}, {BUILDING_DEFAULT_HEIGHT})"
+        sql_height = f"COALESCE({build_height}, {default_build_height})"
     else:
-        sql_height = f"{BUILDING_DEFAULT_HEIGHT}"
+        sql_height = f"{default_build_height}"
     if build_age and build_age != "":
-        sql_age = f"COALESCE({build_age}, {BUILDING_DEFAULT_AGE})"
+        sql_age = f"COALESCE({build_age}, {default_build_age})"
     else:
-        sql_age = f"{BUILDING_DEFAULT_AGE}"
+        sql_age = f"{default_build_age}"
     if build_renovation and build_renovation != "":
-        sql_renovation = f"COALESCE({build_renovation}, {BUILDING_DEFAULT_RENOVATION})"
+        sql_renovation = f"COALESCE({build_renovation}, {default_build_renov})"
     else:
-        sql_renovation = f"{BUILDING_DEFAULT_RENOVATION}"
+        sql_renovation = f"{default_build_renov}"
+    if build_wwr and build_wwr != "":
+        sql_wwr = f"COALESCE({build_wwr}, {default_build_wwr})"
+    else:
+        sql_wwr = f"{default_build_wwr}"
     cursor.execute(
         f"""
         DROP TABLE IF EXISTS TEMPO_BUILDING_2;
@@ -492,12 +515,14 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                                       {GEOM_FIELD} GEOMETRY,
                                       {HEIGHT_FIELD} DOUBLE,
                                       {BUILDING_AGE} INTEGER,
-                                      {BUILDING_RENOVATION} BOOLEAN)
+                                      {BUILDING_RENOVATION} BOOLEAN,
+                                      {BUILDING_WWR} DOUBLE)
             AS SELECT   NULL,
                         ST_MAKEVALID(ST_NORMALIZE({GEOM_FIELD})) AS {GEOM_FIELD},
                         {sql_height} AS {HEIGHT_FIELD},
                         {sql_age} AS {BUILDING_AGE},
-                        {sql_renovation} AS {BUILDING_RENOVATION}
+                        {sql_renovation} AS {BUILDING_RENOVATION},
+                        {sql_wwr} AS {BUILDING_WWR}
             FROM TEMPO_BUILDING_1
         """)
         
@@ -897,6 +922,10 @@ def createsBlocks(cursor, inputBuildings, snappingTolerance = GEOMETRY_MERGE_TOL
                         inputBuildings      , GEOMETRY_SIMPLIFICATION_DISTANCE))
 
     # Identify building/block relations and convert building height to integer
+    build_cols = DataUtil.getColumns(cursor = cursor,
+                                     tableName = inputBuildings)
+    build_cols.remove(HEIGHT_FIELD)
+    build_cols.remove(GEOM_FIELD)
     cursor.execute("""
        {7};
        {8};
@@ -905,7 +934,7 @@ def createsBlocks(cursor, inputBuildings, snappingTolerance = GEOMETRY_MERGE_TOL
                 AS SELECT   a.{1}, a.{2}, CAST(a.{3} AS INT) AS {3}, b.{4}
                 FROM    {5} AS a, {6} AS b
                 WHERE   a.{2} && b.{2} AND ST_INTERSECTS(a.{2}, b.{2});
-        """.format( buildingTable               , ID_FIELD_BUILD, 
+        """.format( buildingTable               , ", a.".join(build_cols), 
                     GEOM_FIELD                  , HEIGHT_FIELD, 
                     ID_FIELD_BLOCK              , inputBuildings, 
                     blockTable                  , DataUtil.createIndex( tableName=inputBuildings, 
@@ -1313,7 +1342,7 @@ def calc_street_indic(cursor, blocks, rect_city, crosswind_lines, wind_dir):
             AS SELECT   {3},
                         {4},
                         {7},
-                        MEDIAN({5}) AS {5}
+                        CAST(MEDIAN({5}) AS DOUBLE) AS {5}
             FROM {6}
             GROUP BY {3}, {4}, {7}
         """.format( DataUtil.createIndex(tableName=splitted_streets_only, 
@@ -1615,7 +1644,7 @@ def generic_facade_indicators(cursor, buildings, rsu, indic, wind_dir):
         
     return rsuFacadeIndic
 
-def calc_build_indic(cursor, buildings, blocks):
+def calc_build_indic(cursor, buildings, blocks, prefix):
     """ Calculates buiding indicators
 
 		Parameters
@@ -1627,6 +1656,8 @@ def calc_build_indic(cursor, buildings, blocks):
                 Name of the table where buildings are saved
             blocks: String
                 Name of the table where blocks are saved
+            prefix: String
+                Prefix to add at the beginning of the output table
         
             
 		Returns
@@ -1763,7 +1794,8 @@ def calc_build_indic(cursor, buildings, blocks):
 
     tablesAndId = {aspect_and_height : [ID_FIELD_BUILD],
                    geometry_orientation : [ID_FIELD_BUILD]}
-    build_indic = joinTables(cursor = cursor, tablesAndId = tablesAndId,
+    build_indic = joinTables(cursor = cursor, 
+                             tablesAndId = tablesAndId,
                              outputTableName = prefix + OUTPUT_BUILD_INDIC)
 
     # Delete temporary tables if not debug mode              
@@ -2021,7 +2053,8 @@ def joinTables(cursor, tablesAndId, outputTableName):
             sql_select += ","
             sql_select += ",".join([f"{letters[i]}.{ind}" for ind in list_col[t]])
             sql_leftjoin += f" LEFT JOIN {t} AS {letters[i]} ON " 
-            sql_leftjoin += " AND ".join([f"a.{ind} = {letters[i]}.{ind}" for ind in tablesAndId[t]])
+            sql_leftjoin += " AND ".join([f"a.{tablesAndId[tables[0]][j]} = {letters[i]}.{ind}" 
+                                          for j, ind in enumerate(tablesAndId[t])])
     
     # Execute the table join
     cursor.execute(
