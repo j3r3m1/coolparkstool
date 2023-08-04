@@ -8,10 +8,18 @@ Created on Tue Jun 13 13:18:02 2023
 import pandas as pd
 import numpy as np
 import tempfile
+import os
+from pathlib import Path
 
 
 OUTPUT_RASTER_EXTENSION = ".Gtiff"
 DELETE_OUTPUT_IF_EXISTS = True
+
+# File base names
+OUTPUT_T = "OUTPUT_T"
+OUTPUT_DT = "OUTPUT_deltaT"
+WIND_DIR_RATE = "WIND_DIR"
+BUILD_INDEP_VAR = "BUILD_INDEP_VAR"
 
 # Informations to set the DB used for geographical calculations
 INSTANCE_NAME = "coolparks"
@@ -62,6 +70,7 @@ N_DIRECTIONS = 8
 DEFAULT_D_PARK_INPUT = -999
 DEFAULT_D_PARK_OUTPUT = -999
 DEFAULT_D_PARK = -999
+DEFAULT_CORRIDOR_AREA = -999
 
 # Table names
 BUILDINGS_TAB = "BUILDINGS"
@@ -92,6 +101,7 @@ NB_STREET_DENSITY = "NB_STREET_DENSITY"
 FREE_FACADE_FRACTION = "FREE_FACADE_FRACTION"
 ASPECT_RATIO = "ASPECT_RATIO"
 BUILD_GEOM_TYPE = "BUILD_GEOM_TYPE"
+CORRIDOR_PARK_FRAC = "CORRIDOR_PARK_FRAC"
 D_PARK_INPUT = "D_INPUT"
 D_PARK_OUTPUT = "D_OUTPUT"
 D_PARK = "D_PARK"
@@ -101,6 +111,11 @@ BUILDING_AGE = "BUILDING_AGE"
 BUILDING_RENOVATION = "BUILDING_RENOVATION"
 BUILDING_CLASS = "BUILDING_CLASS"
 BUILDING_WWR = "BUILDING_WWR"
+DELTA_T = "DELTA_T"
+ENERGY_IMPACT_ABS = "ENERGY_IMPACT_ABS"
+ENERGY_IMPACT_REL = "ENERGY_IMPACT_REL"
+THERM_COMFORT_IMPACT_ABS = "THERM_COMFORT_IMPACT_ABS"
+THERM_COMFORT_IMPACT_REL = "THERM_COMFORT_IMPACT_REL"
 
 # DB name
 DB_NAME = "coolparks"
@@ -175,9 +190,25 @@ BUILDING_PROPERTIES = pd.DataFrame({"Name": ["Construit avant 1974 et non rénov
                                     "Mechanical_vent_rate" : [0.3, 0.3]},
                                     index = [1, 2])
 
+# Regression coefficient and variables correspondance
+coef_var_correspondance = \
+    pd.Series([ASPECT_RATIO,
+               BUILDING_WWR,
+               AMPLIF_FACTOR,
+               BUILD_NORTH_ORIENTATION,
+               RROOF, 
+               RWALL, 
+               UWIN, 
+               RSLAB, 
+               INFILTRATION_RATE, 
+               NATURAL_VENT_RATE,
+               MECHANICAL_VENT_RATE], 
+              index = np.arange(1, 12))
+
 # Dates used for calculation
 START_DATE = "01/06"
 END_DATE = "01/09"
+END_DATE = "10/06"
 
 # Generic names for meteorological variables
 WDIR = "wdir"
@@ -186,3 +217,36 @@ T_AIR = "Ta"
 RH = "RH"
 P_ATMO = "Patmo"
 DPV = "DPV"
+
+# length of the edge of the pattern ("motif") used for creating the empirical models
+PATTERN_SIZE = 10
+
+# Time considered for the day and for the night
+DAY_TIME = 12
+NIGHT_TIME = 23
+
+# Max distance for which the cooling is considered
+MAX_DIST = {DAY_TIME: 50, NIGHT_TIME: 300}
+
+# Extreme values of the factors used for the cooling estimation
+COOLING_FACTORS = {12 : pd.DataFrame({"dpv" : [11.8559505666779, 28.670673995194],
+                                         "ws" : [1.6, 4.6]},
+                                        index = ["min", "max"]),
+                   23 : pd.DataFrame({"dpv" : [2.18714242784999, 10.5792601906677],
+                                           "ws" : [1.6, 4.6]},
+                                        index = ["min", "max"])}
+
+# Empirical model coefficients for park cooling
+COOLING_CREATION_PATH = os.path.join(Path(os.path.dirname(os.path.abspath(__file__))).parents[0], "Resources", "empirical_coefficients", "cooling_creation")
+COEF_COOLING_RATE = {DAY_TIME: pd.read_csv(COOLING_CREATION_PATH + os.sep + f"cooling_rate_{DAY_TIME}.csv",
+                                           header = 0,
+                                           index_col = 0),
+                     NIGHT_TIME : pd.read_csv(COOLING_CREATION_PATH + os.sep + f"cooling_rate_{NIGHT_TIME}.csv",
+                                              header = 0,
+                                              index_col = 0)}
+COEF_SURF_TEMP = {DAY_TIME: pd.read_csv(COOLING_CREATION_PATH + os.sep + f"surface_temp_{DAY_TIME}.csv",
+                                        header = 0,
+                                        index_col = 0),
+                  NIGHT_TIME : pd.read_csv(COOLING_CREATION_PATH + os.sep + f"surface_temp_{NIGHT_TIME}.csv",
+                                           header = 0,
+                                           index_col = 0)}

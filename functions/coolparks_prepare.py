@@ -128,7 +128,7 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
         """
         DROP TABLE IF EXISTS {0}, {1};
         CREATE TABLE {0}
-            AS SELECT  ST_NORMALIZE(ST_MAKEVALID({2})) AS {2}, ID, EXPLOD_ID AS {6}
+            AS SELECT   ST_NORMALIZE(ST_MAKEVALID({2})) AS {2}, ID, EXPLOD_ID AS {6}
             FROM ST_EXPLODE('(SELECT    ST_COLLECTIONEXTRACT(ST_INTERSECTION(a.{2}, 
                                                                              b.{2}), 
                                                              3) AS {2},
@@ -173,7 +173,8 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
                         b.{9},
                         b.{2},
                         ST_YMIN(ST_INTERSECTION(a.{2}, ST_EXTERIORRING(b.{2}))) AS YMIN,
-                        ST_YMAX(ST_INTERSECTION(a.{2}, ST_EXTERIORRING(b.{2}))) AS YMAX
+                        ST_YMAX(ST_INTERSECTION(a.{2}, ST_EXTERIORRING(b.{2}))) AS YMAX,
+                        ST_AREA(b.{2}) AS CORRIDOR_AREA
             FROM {3} AS a RIGHT JOIN {4} AS b ON a.ID = b.ID
             WHERE ST_INTERSECTS(a.{2}, b.{2});
         CREATE TABLE {1}
@@ -228,6 +229,7 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
                         b.{ID_UPSTREAM},
                         ST_Y(a.{GEOM_FIELD})-b.YMIN AS {D_PARK_OUTPUT},
                         b.YMAX-ST_Y(a.{GEOM_FIELD}) AS {D_PARK_INPUT},
+                        b.CORRIDOR_AREA
             FROM {grid_ini} AS a LEFT JOIN {rec_coord_park} AS b
             ON a.ID_COL = b.ID
             WHERE   ST_Y(a.{GEOM_FIELD}) > b.YMIN AND
@@ -247,7 +249,7 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
         CREATE TABLE {grid_ini3}
             AS SELECT   a.ID,
                         b.{ID_UPSTREAM},
-                        b.YMAX-ST_Y(a.{GEOM_FIELD}) AS {D_PARK},
+                        b.YMAX-ST_Y(a.{GEOM_FIELD}) AS {D_PARK}
             FROM {grid_ini} AS a LEFT JOIN {rec_coord_city} AS b
             ON a.ID_COL = b.ID
             WHERE   ST_Y(a.{GEOM_FIELD}) > b.YMIN AND
@@ -271,7 +273,9 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
             AS SELECT   a.*,
                         COALESCE(b.{ID_UPSTREAM}, 1) AS {ID_UPSTREAM},
                         COALESCE(b.{D_PARK_INPUT}, {DEFAULT_D_PARK_INPUT}) AS {D_PARK_INPUT},
-                        COALESCE(b.{D_PARK_OUTPUT}, {DEFAULT_D_PARK_OUTPUT}) AS {D_PARK_OUTPUT}
+                        COALESCE(b.{D_PARK_OUTPUT}, {DEFAULT_D_PARK_OUTPUT}) AS {D_PARK_OUTPUT},
+                        COALESCE(b.CORRIDOR_AREA / ((ABS(b.{D_PARK_OUTPUT}) + ABS(b.{D_PARK_INPUT})) * {dx}),
+                                 {DEFAULT_CORRIDOR_AREA}) AS {CORRIDOR_PARK_FRAC}                        
             FROM {grid_ini} AS a LEFT JOIN {grid_ini2} AS b
             ON a.ID = b.ID;
         """)
