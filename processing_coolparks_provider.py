@@ -34,7 +34,7 @@ from qgis.core import QgsProcessingProvider
 from processing.core.ProcessingConfig import ProcessingConfig
 
 from .preprocessing_algorithm import CoolParksPreparerAlgorithm
-# from .processing_algorithm import CoolParksProcessorAlgorithm
+from .processing_algorithm import CoolParksProcessorAlgorithm
 # from .postprocessing_algorithm import CoolParksAnalyzerAlgorithm
 
 import os.path
@@ -70,7 +70,7 @@ class ProcessingCoolParksProvider(QgsProcessingProvider):
         
         
         # #Processor
-        # self.addAlgorithm(CoolParksProcessorAlgorithm())
+        self.addAlgorithm(CoolParksProcessorAlgorithm())
 
         # #Postprocessor
         # self.addAlgorithm(CoolParksAnalyzerAlgorithm())

@@ -22,9 +22,9 @@
  ***************************************************************************/
 """
 
-__author__ = 'Jérémy Bernard / University of Gothenburg'
+__author__ = 'Jérémy Bernard'
 __date__ = '2023-07-06'
-__copyright__ = '(C) 2023 by Jérémy Bernard / University of Gothenburg'
+__copyright__ = '(C) 2023 by Jérémy Bernard'
 
 # This will get replaced with a git SHA1 when you do a git archive
 
@@ -225,9 +225,9 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterString(
                 self.SCENARIO_NAME,
-                self.tr('Name of the scenario'),
-                None,
-                False)) 
+                self.tr('Name of the geospatial scenario'),
+                defaultValue = DEFAULT_PREFIX,
+                optional = False)) 
 
     def processAlgorithm(self, parameters, context, feedback):
         """
@@ -341,7 +341,11 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(f'The folder "{prefix}" already exists in "{outputDirectory}" directory. Please change "Scenario name" or remove the corresponding directory')
         else:
             os.mkdir(outputDirectory + os.path.sep + prefix)
-
+        
+        # Create the output folder for the preprocessors and processors
+        os.mkdir(outputDirectory + os.path.sep + prefix + os.sep + OUTPUT_PREPROCESSOR_FOLDER)
+        os.mkdir(outputDirectory + os.path.sep + prefix + os.sep + OUTPUT_PROCESSOR_FOLDER)
+        
         # if feedback:
         #     feedback.setProgressText("Writing settings for this model run to specified output folder (Filename: RunInfoURock_YYYY_DOY_HHMM.txt)")
         # WriteMetadataURock.writeRunInfo(outputDirectory, build_file, heightBuild,

@@ -3,6 +3,7 @@ from .globalVariables import *
 import numpy as np
 import pandas as pd
 from osgeo import gdal, gdalconst
+import itertools
 
 from . import DataUtil
 from . import loadData
@@ -63,13 +64,15 @@ def air_cooling_and_diffusion(grid_sum_tair, grid_sum_deltatair, grid_ind_city_b
     # Effect of the city morphology before the park on the air temperature
     grid_val_d.loc[grid_ind_city_before.index] = \
         tair + calc_morpho_t_effect(df_indic = grid_ind_city_before,
-                                    ws_norm = ws_norm)
+                                    ws_norm = ws_norm,
+                                    day_hour = day_hour)
     
     ######## EFFECT OF THE MORPHO ON THE TEMPERATURE AFTER THE PARK #######
     # Calculate the air temperature of the city after the park without the cool air transport effect
     grid_val_d.loc[grid_ind_city_after.index] = \
         tair + calc_morpho_t_effect(df_indic = grid_ind_city_after,
-                                    ws_norm = ws_norm)
+                                    ws_norm = ws_norm,
+                                    day_hour = day_hour)
     
     # Keep a track of what would be the air temperature of the city witout park
     grid_val_d_nopark = grid_val_d.copy(deep = True)
@@ -93,10 +96,10 @@ def air_cooling_and_diffusion(grid_sum_tair, grid_sum_deltatair, grid_ind_city_b
     
         # Consider the park ground and canopy cover to update park air temperature
         grid_val_d.loc[grid_ind_park_upstream.index] = calc_park_effect(df_indic = grid_ind_park_upstream, 
-                                                                          tair = input_park_tair,
-                                                                          ws_norm = ws_norm, 
-                                                                          dpv_norm = dpv_norm,
-                                                                          day_hour = day_hour)
+                                                                        tair = input_park_tair,
+                                                                        ws_norm = ws_norm, 
+                                                                        dpv_norm = dpv_norm,
+                                                                        day_hour = day_hour)
         
         ######## EFFECT OF THE MORPHO ON THE TEMPERATURE AFTER THE PARK #######
         # Get the cells for the i+1 st "row" of city
@@ -109,7 +112,8 @@ def air_cooling_and_diffusion(grid_sum_tair, grid_sum_deltatair, grid_ind_city_b
         ######## EFFECT OF THE MORPHO ON THE COOL AIR TRANSPORT AFTER THE PARK #######
         # Calculate the max distance of the cooling effect for each corridor
         d_morpho = calc_morpho_d_effect(df_indic = grid_ind_city_upstream,
-                                        ws_norm = ws_norm)
+                                        ws_norm = ws_norm,
+                                        day_hour = day_hour)
         
         # Update the air temperature of the city after the park to consider the cool air transport effect
         coef_t_morpho = grid_ind_city_upstream.D_PARK.div(d_morpho)
@@ -157,7 +161,7 @@ def identify_point_position(grid_indic):
              for d in grid_indic.keys()}
     
     
-def calc_morpho_t_effect(df_indic, ws_norm):
+def calc_morpho_t_effect(df_indic, ws_norm, day_hour):
     """ Calculates the effect of the morphology on the air temperature observed in 
     a neighborhood.
 
@@ -168,18 +172,35 @@ def calc_morpho_t_effect(df_indic, ws_norm):
 				Morphology indicator used for the regression
             ws_norm: float
                 Wind speed at a given date and time normalized by the cooling factor
+            day_hour: int
+                Time of the day
         
 		Returns
 		_ _ _ _ _ _ _ _ _ _ 
 
             dT: pd.Series
                 Air temperature increase due to the urban morphology of each city corridor"""
-    dT = pd.Series(index = df_indic.index, dtype = float)
-    dT.loc[:] = 0
+    ws = denormalize_factor(value = ws_norm, 
+                            value_min = COOLING_FACTORS[day_hour].loc["min","ws"], 
+                            value_max = COOLING_FACTORS[day_hour].loc["max","ws"])
+    
+    # Limit the values of the geospatial indicators to the range used for this indicator during the training phase
+    df_indic_lim = limit_geoindic(df_indic)
+    
+    # Test whether the formula type has a wind speed multiplicator
+    if COEF_DT_MORPHO[day_hour].loc[WIND_FACTOR_NAME, "value"] == 0:
+        geospatial_term = sum([df_indic_lim[i] * COEF_DT_MORPHO[day_hour].loc[i, "value"] \
+                               for i in COEF_DT_MORPHO[day_hour].index[3:]])
+    else:
+        geospatial_term = ws * sum([df_indic_lim[i] * COEF_DT_MORPHO[day_hour].loc[i, "value"] \
+                                    for i in COEF_DT_MORPHO[day_hour].index[3:]])
+    dT = COEF_DT_MORPHO[day_hour].loc[CONSTANT_NAME, "value"] \
+        + ws * COEF_DT_MORPHO[day_hour].loc[WSPEED, "value"] \
+            + geospatial_term
     
     return dT
 
-def calc_morpho_d_effect(df_indic, ws_norm):
+def calc_morpho_d_effect(df_indic, ws_norm, day_hour):
     """ Calculates the effect of the morphology on the distance where the cooling
     due to the park can be observed.
 
@@ -190,6 +211,8 @@ def calc_morpho_d_effect(df_indic, ws_norm):
 				Morphology indicator used for the regression
             ws_norm: float
                 Wind speed at a given date and time normalized by the cooling factor
+            day_hour: int
+                Time of the day
         
 		Returns
 		_ _ _ _ _ _ _ _ _ _ 
@@ -197,8 +220,23 @@ def calc_morpho_d_effect(df_indic, ws_norm):
             d: pd.Series
                 For each city corridor, the distance up to which the cooling effect
                 of the park is measurable"""
-    d = pd.Series(index = df_indic.index, dtype = float)
-    d.loc[:] = 100
+    ws = denormalize_factor(value = ws_norm, 
+                            value_min = COOLING_FACTORS[day_hour].loc["min","ws"], 
+                            value_max = COOLING_FACTORS[day_hour].loc["max","ws"])
+    
+    # Limit the values of the geospatial indicators to the range used for this indicator during the training phase
+    df_indic_lim = limit_geoindic(df_indic)
+    
+    # Test whether the formula type has a wind speed multiplicator
+    if COEF_D_MORPHO[day_hour].loc[WIND_FACTOR_NAME, "value"] == 0:
+        geospatial_term = sum([df_indic_lim[i] * COEF_D_MORPHO[day_hour].loc[i, "value"] \
+                               for i in COEF_D_MORPHO[day_hour].index[3:]])
+    else:
+        geospatial_term = ws * sum([df_indic_lim[i] * COEF_D_MORPHO[day_hour].loc[i, "value"] \
+                                    for i in COEF_D_MORPHO[day_hour].index[3:]])
+    d = COEF_D_MORPHO[day_hour].loc[CONSTANT_NAME, "value"] \
+        + ws * COEF_D_MORPHO[day_hour].loc[WSPEED, "value"] \
+            + geospatial_term
     
     return d
 
@@ -233,7 +271,7 @@ def calc_park_effect(df_indic, tair, ws_norm, dpv_norm, day_hour):
                                             ID_UPSTREAM, CORRIDOR_PARK_FRAC, D_PARK, BLOCK_NB_DENSITY,
                                             BLOCK_SURF_FRACTION, GEOM_MEAN_BUILD_HEIGHT,
                                             STREET_WIDTH, NB_STREET_DENSITY, FREE_FACADE_FRACTION,
-                                            MEAN_BUILD_HEIGHT])
+                                            MEAN_BUILD_HEIGHT, OPENING_FRACTION])
     df_ts = COEF_SURF_TEMP[day_hour].loc[combi_col_names, "a0"] + COEF_SURF_TEMP[day_hour].loc[combi_col_names, "a1"] * ws_norm +\
         COEF_SURF_TEMP[day_hour].loc[combi_col_names, "a2"] * dpv_norm + COEF_SURF_TEMP[day_hour].loc[combi_col_names, "a12"] * ws_norm * dpv_norm
     df_cr = COEF_COOLING_RATE[day_hour].loc[combi_col_names, "a0"] + COEF_COOLING_RATE[day_hour].loc[combi_col_names, "a1"] * ws_norm +\
@@ -258,9 +296,21 @@ def calc_park_effect(df_indic, tair, ws_norm, dpv_norm, day_hour):
     
     return T_park
 
+def limit_geoindic(df_indic):
+    for ind in df_indic.columns[df_indic.columns.isin(TRANSPORT_MAX_VAL.index)]:
+        df_indic[ind][df_indic[ind] > TRANSPORT_MAX_VAL.loc[ind]] = TRANSPORT_MAX_VAL.loc[ind]
+        df_indic[ind][df_indic[ind] < TRANSPORT_MIN_VAL.loc[ind]] = TRANSPORT_MIN_VAL.loc[ind]
+    
+    return df_indic
 
 def normalize_factor(value, value_min, value_max):
-    return (value - (value_min + value_max) / 2) / ((value_max - value_min) / 2)
+    result = (value - (value_min + value_max) / 2) / ((value_max - value_min) / 2)
+    result[result>1] = 1
+    result[result<-1] = -1
+    return result
+
+def denormalize_factor(value, value_min, value_max):
+    return value * ((value_max - value_min) / 2) + (value_min + value_max) / 2
 
 def identify_previous_temp(grid_ind_current_upstream, grid_ind_previous, grid_tair):
     """ Identify the last IDs of the previous land type (either city if we are
@@ -356,8 +406,6 @@ def calc_build_impact(df_indic, deltaT_cols):
 
 			df_indic: pd.DataFrame
 				Building indicators used for the regression
-            deltaT_cols: list
-                List of the column names of the deltaT indicator
 
 		Returns
 		_ _ _ _ _ _ _ _ _ _ 
@@ -369,13 +417,13 @@ def calc_build_impact(df_indic, deltaT_cols):
     
     # Calculate the energy consumption and thermal comfort without park effect
     df_indic_nopark = df_indic.copy(deep = True)
-    df_indic_nopark.loc[:, deltaT_cols] = 0
-    df_NRJ_without = build_nrj_formula(df_indic = df_indic_nopark)
-    df_comf_without = build_comf_formula(df_indic = df_indic_nopark)
+    df_indic_nopark.loc[:, BUILDING_AMPLIF_FACTOR] = 0
+    df_NRJ_without = build_impact_formula(df_indic = df_indic_nopark, variable = "NRJ")
+    df_comf_without = build_impact_formula(df_indic = df_indic_nopark, variable = "comfort")
     
     # Calculate the energy consumption and thermal comfort with park effect
-    df_NRJ_with = build_nrj_formula(df_indic = df_indic)
-    df_comf_with = build_comf_formula(df_indic = df_indic)
+    df_NRJ_with = build_impact_formula(df_indic = df_indic, variable = "NRJ")
+    df_comf_with = build_impact_formula(df_indic = df_indic, variable = "comfort")
     
     # Calculates the absolute impact of the park
     df_impacts[ENERGY_IMPACT_ABS] = df_NRJ_without.subtract(df_NRJ_with)
@@ -387,7 +435,7 @@ def calc_build_impact(df_indic, deltaT_cols):
        
     return df_impacts
 
-def build_nrj_formula(df_indic):
+def build_impact_formula(df_indic, variable):
     """ Calculates the effect of the park on building energy cooling
 
 		Parameters
@@ -395,30 +443,59 @@ def build_nrj_formula(df_indic):
 
 			df_indic: pd.DataFrame
 				Building indicators used for the regression
+            variable: String
+                The type of variable that is needed to calculate
+                    -> "NRJ": for building cooling calculation
+                    -> "comfort": for thermal comfort inside building
 
 		Returns
 		_ _ _ _ _ _ _ _ _ _ 
 
-            df_cooling: pd.Serie
-                For each building, the energy needed for cooling"""
-    df_cooling
+            df_build_effect: pd.Serie
+                For each building, the effect on the building (either energy or thermal comfort)"""
+    df_effect = pd.Series(index = df_indic.index)
     
-    return df_cooling
-
-def build_comf_formula(df_indic):
-    """ Calculates the effect of the park on building thermal comfort
-
-		Parameters
-		_ _ _ _ _ _ _ _ _ _ 
-
-			df_indic: pd.DataFrame
-				Building indicators used for the regression
-
-		Returns
-		_ _ _ _ _ _ _ _ _ _ 
-
-            df_comfort: pd.Serie
-                For each building, the number of degree hours of thermal discomfort"""
-    df_comfort
+    # The number of models is equal to the combination of all values included within variables
+    list_of_possible = [df_indic[BUILD_GEOM_TYPE].unique(),
+                        df_indic[BUILD_NORTH_ORIENTATION].unique(),
+                        df_indic[BUILDING_CLASS].unique()]
+    all_combi = list(itertools.product(*list_of_possible))
     
-    return df_comfort
+    if variable == "NRJ":
+        path_to_file = BUILD_ENERGY_PATH
+    elif variable == "comfort":
+        path_to_file = BUILD_COMFORT_PATH
+    
+    # For each combination of building type
+    for gt_c, ot_c, bc_c in all_combi:
+        # Get the name corresponding to each type
+        gt = BUILDING_GEOMETRY_CLASSES.loc[gt_c, "name"]
+        ot = ORIENTATIONS.loc[ot_c, "name"]
+        bc = BUILDING_PROPERTIES.loc[bc_c, "Name"]
+        
+        # Load regression coefficients
+        df_coef = pd.read_csv(path_to_file + os.sep + f"{gt}_{ot}_{bc}.csv",
+                              header = 0,
+                              index_col = 0)
+        
+        # Keep only buildings having the current combination of types
+        condition = (df_indic[BUILD_GEOM_TYPE] == gt_c)\
+            * (df_indic[BUILD_NORTH_ORIENTATION] == ot_c)\
+                * (df_indic[BUILDING_CLASS] == bc_c)
+        idx_build = df_indic[condition].index
+        
+        # Calculates the energy needed by the building
+        constant = df_coef[df_coef["var1"].isna()].value[0]
+        
+        condition_lin_term = (df_coef["var1"].notna())*(df_coef["var2"].isna())
+        linear_terms = sum([row["value"] * df_indic.loc[idx_build, row["var1"]] \
+                        for index, row in df_coef[condition_lin_term][["value", "var1"]].iterrows()])
+    
+        condition_cross_term = (df_coef["var1"].notna())*(df_coef["var2"].notna())
+        cross_terms = sum([row["value"] * df_indic.loc[idx_build, row["var1"]]\
+                            * df_indic.loc[idx_build, row["var2"]] \
+                        for index, row in df_coef[condition_cross_term][["value", "var1", "var2"]].iterrows()])
+    
+        df_effect.loc[idx_build] = constant + linear_terms + cross_terms
+    
+    return df_effect

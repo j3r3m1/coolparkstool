@@ -48,7 +48,10 @@ def prepareData(plugin_directory,
                 nCrossWindOut = N_CROSS_WIND_OUTSIDE,
                 feedback = None,
                 output_directory = TEMPO_DIRECTORY,
-                prefix = ""):
+                prefix = DEFAULT_PREFIX):
+    
+    # Define the entire output directory path
+    final_output_dir = output_directory+os.sep+prefix+os.sep+OUTPUT_PREPROCESSOR_FOLDER
     
     # Define temporary tables
     city_all_indic = "CITY_ALL_INDIC"
@@ -116,7 +119,7 @@ def prepareData(plugin_directory,
     # Save building indicators
     saveData.saveTable(cursor = cursor,
                        tableName = building_indic, 
-                       filedir = f"""{output_directory+os.sep+prefix+os.sep}{OUTPUT_BUILD_INDIC}.geojson""", 
+                       filedir = f"""{final_output_dir+os.sep}{OUTPUT_BUILD_INDIC}.geojson""", 
                        delete = True)
     # ----------------------------------------------------------------------
     # FOR EACH WIND DIRECTION
@@ -231,33 +234,39 @@ def prepareData(plugin_directory,
                        CREATE TABLE {OUTPUT_GRID + str(d).replace(".", "_")}
                            AS SELECT ID, {GEOM_FIELD}
                            FROM {output_grid};
-                       CALL CSVWRITE('{output_directory+os.sep+prefix+os.sep}{OUTPUT_GRID}_{str(d).replace(".", "_")}.csv',
+                       CALL CSVWRITE('{final_output_dir+os.sep}{OUTPUT_GRID}_{str(d).replace(".", "_")}.csv',
                                      '(SELECT {",".join(all_cols_without_geom)} FROM {output_grid})');
                        """)
         saveData.saveTable(cursor = cursor,
                            tableName = OUTPUT_GRID + str(d).replace(".", "_"), 
-                           filedir = f"""{output_directory+os.sep+prefix+os.sep}{OUTPUT_GRID}_{str(d).replace(".", "_")}.geojson""", 
+                           filedir = f"""{final_output_dir+os.sep}{OUTPUT_GRID}_{str(d).replace(".", "_")}.geojson""", 
                            delete = True, 
                            rotationCenterCoordinates = rotationCenterCoordinates, 
                            rotateAngle = -d)
         saveData.saveTable(cursor = cursor,
                            tableName = city_all_indic, 
-                           filedir = f"""{output_directory+os.sep+prefix+os.sep}{OUTPUT_CITY_INDIC}_{str(d).replace(".", "_")}.geojson""", 
+                           filedir = f"""{final_output_dir+os.sep}{OUTPUT_CITY_INDIC}_{str(d).replace(".", "_")}.geojson""", 
                            delete = True, 
                            rotationCenterCoordinates = rotationCenterCoordinates, 
                            rotateAngle = -d)
         saveData.saveTable(cursor = cursor,
                            tableName = rect_park_frac, 
-                           filedir = f"""{output_directory+os.sep+prefix+os.sep}{OUTPUT_PARK_INDIC}_{str(d).replace(".", "_")}.geojson""", 
+                           filedir = f"""{final_output_dir+os.sep}{OUTPUT_PARK_INDIC}_{str(d).replace(".", "_")}.geojson""", 
                            delete = True, 
                            rotationCenterCoordinates = rotationCenterCoordinates, 
                            rotateAngle = -d)
+    
+    # Save also the park  in the output folder
+    saveData.saveTable(cursor = cursor,
+                       tableName = PARK_BOUNDARIES_TAB, 
+                       filedir = f"""{final_output_dir+os.sep+PARK_BOUNDARIES_TAB}.geojson""", 
+                       delete = True)        
         
     return cursor, city_all_indic
 
 def calcParkInfluence(weatherFilePath, 
-                      scenarioOutputPath,
-                      parkBoundaryFilePath,
+                      preprocessOutputPath,
+                      prefix = DEFAULT_PREFIX,
                       startDate = START_DATE,
                       endDate = END_DATE,
                       wdir = "wdir10",
@@ -265,6 +274,10 @@ def calcParkInfluence(weatherFilePath,
                       tair = "t2m",
                       rh = "r2m",
                       pa = "sp"):
+    # Define the entire input and output directory paths
+    final_output_dir = preprocessOutputPath+os.sep+OUTPUT_PROCESSOR_FOLDER+os.sep+prefix
+    final_input_dir = preprocessOutputPath+os.sep+OUTPUT_PREPROCESSOR_FOLDER
+    
     # Get the number of directions used for the calculations (for example reading the write metadata)
     ndir = N_DIRECTIONS
     dirs = np.arange(0, 360, 360./ndir)
@@ -272,9 +285,9 @@ def calcParkInfluence(weatherFilePath,
     # Load grid info for each direction
     gridFileDic = {d: f"""{OUTPUT_GRID}_{str(float(d)).replace(".", "_")}""" 
                            for d in dirs}
-    grids = {i: gpd.read_file(scenarioOutputPath + os.sep + gridFileDic[i] + ".geojson") 
+    grids = {i: gpd.read_file(final_input_dir + os.sep + gridFileDic[i] + ".geojson") 
                     for i in gridFileDic.keys()}
-    grid_indic = {i: pd.read_csv(scenarioOutputPath + os.sep + gridFileDic[i] + ".csv",
+    grid_indic = {i: pd.read_csv(final_input_dir + os.sep + gridFileDic[i] + ".csv",
                                  na_values = [DEFAULT_D_PARK_INPUT, DEFAULT_D_PARK_OUTPUT, DEFAULT_D_PARK]) 
                     for i in gridFileDic.keys()}
     
@@ -367,7 +380,7 @@ def calcParkInfluence(weatherFilePath,
         gdf_all = gpd.GeoSeries([Polygon([(xmin, ymin), (xmax, ymin), 
                                           (xmax, ymax), (xmin, ymax),
                                           (xmin, ymin)])]).set_crs(epsg)
-        gdf_park = gpd.read_file(parkBoundaryFilePath)
+        gdf_park = gpd.read_file(os.path.join(final_input_dir, PARK_BOUNDARIES_TAB + ".geojson"))
         gdf_city = gdf_all.difference(gdf_park)
         gdf_city.to_file(TEMPO_DIRECTORY + os.sep + "city.geojson",
                          driver = "GeoJSON")
@@ -397,7 +410,7 @@ def calcParkInfluence(weatherFilePath,
                                 'METHOD':0,
                                 'EXTENT':f'{xmin},{xmax},{ymin},{ymax} [EPSG:{epsg}]',
                                 'PIXEL_SIZE':MIN_CELL_SIZE,
-                                'OUTPUT':f'{scenarioOutputPath + os.sep + output_T_file[wd]}_{str(tp)}h.tif'})
+                                'OUTPUT':f'{final_output_dir + os.sep + output_T_file[wd]}_{str(tp)}h.tif'})
                 processing.run("qgis:tininterpolation", 
                                {'INTERPOLATION_DATA':f'{TEMPO_DIRECTORY + os.sep + output_dT_file[wd] + ".geojson"}::~::0::~::1::~::0',
                                 'METHOD':0,
@@ -420,11 +433,11 @@ def calcParkInfluence(weatherFilePath,
                                 'MULTITHREADING':False,
                                 'OPTIONS':'','DATA_TYPE':0,
                                 'EXTRA':'',
-                                'OUTPUT':f'{scenarioOutputPath+ os.sep + output_dT_file[wd]}_{str(tp)}h.tif'})
+                                'OUTPUT':f'{final_output_dir + os.sep + output_dT_file[wd]}_{str(tp)}h.tif'})
                 
                 # Average the temperature using grid from all directions
-                raster_t_buf = gdal.Open(f'{scenarioOutputPath + os.sep + output_T_file[wd]}_{str(tp)}h.tif')
-                raster_dt_buf = gdal.Open(f'{scenarioOutputPath + os.sep + output_dT_file[wd]}_{str(tp)}h.tif')
+                raster_t_buf = gdal.Open(f'{final_output_dir + os.sep + output_T_file[wd]}_{str(tp)}h.tif')
+                raster_dt_buf = gdal.Open(f'{final_output_dir + os.sep + output_dT_file[wd]}_{str(tp)}h.tif')
                 
                 array_t_buf = raster_t_buf.ReadAsArray()
                 array_dt_buf = raster_dt_buf.ReadAsArray()
@@ -443,8 +456,9 @@ def calcParkInfluence(weatherFilePath,
                     dt_final += array_dt_buf * weights[wd] / weight_sum
                 i += 1
         
-        output_t_path[tp] = f'{scenarioOutputPath + os.sep + OUTPUT_T}_{str(tp)}h'
-        output_dt_path[tp] = f'{scenarioOutputPath + os.sep + OUTPUT_DT}_{str(tp)}h'
+        output_t_path[tp] = f'{final_output_dir + os.sep + OUTPUT_T}_{str(tp)}h'
+        output_dt_path[tp] = f'{final_output_dir + os.sep + OUTPUT_DT}_{str(tp)}h'
+        
         # Save the final air temperature (and also delta T air)
         calc_fct.save_raster(array = t_final, 
                              path = output_t_path[tp], 
@@ -461,14 +475,23 @@ def calcParkInfluence(weatherFilePath,
                              projection = projection)
         
         # Save the weights
-        weights.to_csv(f'{scenarioOutputPath + os.sep + WIND_DIR_RATE}_{str(tp)}h.csv')
+        weights.to_csv(f'{final_output_dir + os.sep + WIND_DIR_RATE}_{str(tp)}h.csv')
         
     return output_t_path, output_dt_path
 
 
-def calcBuildingImpact(scenarioOutputPath,
-                       buildingPath,
-                       output_dt_path):
+def calcBuildingImpact(preprocessOutputPath,
+                       prefix = DEFAULT_PREFIX):
+    # Define the entire input and output directory paths
+    final_output_dir = preprocessOutputPath+os.sep+OUTPUT_PROCESSOR_FOLDER+os.sep+prefix
+    final_input_dir = preprocessOutputPath+os.sep+OUTPUT_PREPROCESSOR_FOLDER
+    
+    
+    # Recover data from previous steps
+    buildingPath = os.path.join(final_input_dir, OUTPUT_BUILD_INDIC + ".geojson")
+    output_dt_path = {tp: f'{final_output_dir + os.sep + OUTPUT_DT}_{str(tp)}h'\
+                      for tp in [DAY_TIME, NIGHT_TIME]}
+    
     # Get the centroid of each building
     centroid = processing.run("native:centroids",
                               {'INPUT':buildingPath,
@@ -497,13 +520,18 @@ def calcBuildingImpact(scenarioOutputPath,
         build_indep_var = processing.run("native:rastersampling",
                                          {'INPUT':input_vector,
                                           'RASTERCOPY':filled['output'],
-                                          'COLUMN_PREFIX':output_vector,
+                                          'COLUMN_PREFIX':f'{DELTA_T + str(tp)}h',
                                           'OUTPUT':output_vector})
         
     # Load the independent variables
     df_points = gpd.read_file(build_indep_var['OUTPUT'])\
                        .drop("geometry", axis = 1)\
                            .set_index(ID_FIELD_BUILD)
+                           
+    # Calculates the amplification factor for each building
+    deltaT_list = [f'{DELTA_T + str(tp)}h1' for tp in output_dt_path.keys()]
+    df_points[BUILDING_AMPLIF_FACTOR] = df_points[deltaT_list].mean(axis = 1)
+    df_points.drop(deltaT_list, axis = 1, inplace = True)
     
     # Calculate the absolute and relative impacts of the park on the buildings
     df_impacts = calc_fct.calc_build_impact(df_indic = df_points,
@@ -512,10 +540,10 @@ def calcBuildingImpact(scenarioOutputPath,
     
     # Join the independent variables and impacts of the park on the buildings 
     # to the building geometry
-    gdf_build = gpd.read_file(buildingPath)[["geometry"]].set_index(ID_FIELD_BUILD)
+    gdf_build = gpd.read_file(buildingPath)[[ID_FIELD_BUILD, "geometry"]].set_index(ID_FIELD_BUILD)
     gdf_build = gdf_build.join(df_impacts)
     
     # Save the results in a vector layer
-    output_vector = f'{scenarioOutputPath + os.sep + BUILD_INDEP_VAR}.geojson'
+    output_vector = f'{final_output_dir+ os.sep + BUILD_INDEP_VAR}.geojson'
     gdf_build.to_file(output_vector,
                       driver = "GeoJSON")

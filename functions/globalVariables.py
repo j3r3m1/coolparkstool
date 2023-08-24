@@ -11,9 +11,14 @@ import tempfile
 import os
 from pathlib import Path
 
+DEFAULT_PREFIX = "default"
 
 OUTPUT_RASTER_EXTENSION = ".Gtiff"
 DELETE_OUTPUT_IF_EXISTS = True
+
+# Output folder names
+OUTPUT_PREPROCESSOR_FOLDER = "preprocessor_outputs"
+OUTPUT_PROCESSOR_FOLDER = "processor_outputs"
 
 # File base names
 OUTPUT_T = "OUTPUT_T"
@@ -98,6 +103,7 @@ MEAN_BUILD_HEIGHT = "MEAN_BUILD_HEIGHT"
 GEOM_MEAN_BUILD_HEIGHT = "GEOM_MEAN_BUILD_HEIGHT"
 STREET_WIDTH = "STREET_WIDTH"
 NB_STREET_DENSITY = "NB_STREET_DENSITY"
+OPENING_FRACTION = "OPENING_FRACTION"
 FREE_FACADE_FRACTION = "FREE_FACADE_FRACTION"
 ASPECT_RATIO = "ASPECT_RATIO"
 BUILD_GEOM_TYPE = "BUILD_GEOM_TYPE"
@@ -111,6 +117,15 @@ BUILDING_AGE = "BUILDING_AGE"
 BUILDING_RENOVATION = "BUILDING_RENOVATION"
 BUILDING_CLASS = "BUILDING_CLASS"
 BUILDING_WWR = "BUILDING_WWR"
+BUILDING_AMPLIF_FACTOR = "AMPLIF_FACTOR"
+BUILDING_RROOF = "RROOF"
+BUILDING_RWALL = "RWALL"
+BUILDING_UWIN = "UWIN"
+BUILDING_RSLAB = "RSLAB"
+BUILDING_INFILTRATION_RATE = "INFILTRATION_RATE"
+BUILDING_NATURAL_VENT_RATE = "NATURAL_VENT_RATE"
+BUILDING_MECHANICAL_VENT_RATE = "MECHANICAL_VENT_RATE"
+
 DELTA_T = "DELTA_T"
 ENERGY_IMPACT_ABS = "ENERGY_IMPACT_ABS"
 ENERGY_IMPACT_REL = "ENERGY_IMPACT_REL"
@@ -123,11 +138,11 @@ DB_NAME = "coolparks"
 DEBUG = True
 
 # Series of canopy and ground park types and combinations of each
-S_GROUND = pd.Series({1:"sol nu",
+S_GROUND = pd.Series({1: "sol nu",
                       2: "eau", 
                       3: "herbace", 
                       4: "impermeable"})
-S_CANOPY = pd.Series({10:"arbre isole",
+S_CANOPY = pd.Series({10: "arbre isole",
                       20: "boise", 
                       30: "boise dense"})
 S_GROUND_CANOPY = S_GROUND.append(pd.Series({i+j: S_GROUND[i] + " / " + S_CANOPY[j]
@@ -194,16 +209,20 @@ BUILDING_PROPERTIES = pd.DataFrame({"Name": ["Construit avant 1974 et non rénov
 coef_var_correspondance = \
     pd.Series([ASPECT_RATIO,
                BUILDING_WWR,
-               AMPLIF_FACTOR,
-               BUILD_NORTH_ORIENTATION,
-               RROOF, 
-               RWALL, 
-               UWIN, 
-               RSLAB, 
-               INFILTRATION_RATE, 
-               NATURAL_VENT_RATE,
-               MECHANICAL_VENT_RATE], 
+               BUILDING_AMPLIF_FACTOR,
+               HEIGHT_FIELD,
+               BUILDING_RROOF, 
+               BUILDING_RWALL, 
+               BUILDING_UWIN, 
+               BUILDING_RSLAB, 
+               BUILDING_INFILTRATION_RATE, 
+               BUILDING_NATURAL_VENT_RATE,
+               BUILDING_MECHANICAL_VENT_RATE], 
               index = np.arange(1, 12))
+    
+# Basic value used as reference for the calculation of the amplification factor
+# used as input in the building energy model to consider the cooling effect of the park
+BASIC_COOLING = -0.11
 
 # Dates used for calculation
 START_DATE = "01/06"
@@ -230,11 +249,11 @@ MAX_DIST = {DAY_TIME: 50, NIGHT_TIME: 300}
 
 # Extreme values of the factors used for the cooling estimation
 COOLING_FACTORS = {12 : pd.DataFrame({"dpv" : [11.8559505666779, 28.670673995194],
-                                         "ws" : [1.6, 4.6]},
-                                        index = ["min", "max"]),
+                                      "ws" : [1.6, 4.6]},
+                                     index = ["min", "max"]),
                    23 : pd.DataFrame({"dpv" : [2.18714242784999, 10.5792601906677],
-                                           "ws" : [1.6, 4.6]},
-                                        index = ["min", "max"])}
+                                      "ws" : [1.6, 4.6]},
+                                     index = ["min", "max"])}
 
 # Empirical model coefficients for park cooling
 COOLING_CREATION_PATH = os.path.join(Path(os.path.dirname(os.path.abspath(__file__))).parents[0], "Resources", "empirical_coefficients", "cooling_creation")
@@ -250,3 +269,33 @@ COEF_SURF_TEMP = {DAY_TIME: pd.read_csv(COOLING_CREATION_PATH + os.sep + f"surfa
                   NIGHT_TIME : pd.read_csv(COOLING_CREATION_PATH + os.sep + f"surface_temp_{NIGHT_TIME}.csv",
                                            header = 0,
                                            index_col = 0)}
+
+# Empirical model coefficients for park cool air diffusion
+WIND_FACTOR_NAME = "wind_factor"
+CONSTANT_NAME = "constant"
+COOLING_TRANSPORT_PATH = os.path.join(Path(os.path.dirname(os.path.abspath(__file__))).parents[0], "Resources", "empirical_coefficients", "cooled_air_transport")
+COEF_DT_MORPHO = {DAY_TIME: pd.read_csv(COOLING_TRANSPORT_PATH + os.sep + f"dt_morpho_{DAY_TIME}.csv",
+                                        header = 0,
+                                        index_col = 0),
+                  NIGHT_TIME : pd.read_csv(COOLING_TRANSPORT_PATH + os.sep + f"dt_morpho_{NIGHT_TIME}.csv",
+                                           header = 0,
+                                           index_col = 0)}
+COEF_D_MORPHO = {DAY_TIME: pd.read_csv(COOLING_TRANSPORT_PATH + os.sep + f"d_morpho_{DAY_TIME}.csv",
+                                       header = 0,
+                                       index_col = 0),
+                 NIGHT_TIME : pd.read_csv(COOLING_TRANSPORT_PATH + os.sep + f"d_morpho_{NIGHT_TIME}.csv",
+                                          header = 0,
+                                          index_col = 0)}
+
+# Maximum and minimum values achievable for the spatial indicators (due to training data calibration)
+TRAINING_TRANSPORT_PATH = os.path.join(Path(os.path.dirname(os.path.abspath(__file__))).parents[0], "Resources", "cooling_transport_results")
+TRANSPORT_MAX_VAL = pd.read_csv(TRAINING_TRANSPORT_PATH + os.sep + f"training_data_{DAY_TIME}h.csv",
+                                header = 0,
+                                index_col = 0).max()
+TRANSPORT_MIN_VAL = pd.read_csv(TRAINING_TRANSPORT_PATH + os.sep + f"training_data_{DAY_TIME}h.csv",
+                                header = 0,
+                                index_col = 0).min()
+
+# Empirical model coefficients for building energy and building thermal comfort
+BUILD_ENERGY_PATH = os.path.join(Path(os.path.dirname(os.path.abspath(__file__))).parents[0], "Resources", "empirical_coefficients", "building_energy")
+BUILD_COMFORT_PATH = os.path.join(Path(os.path.dirname(os.path.abspath(__file__))).parents[0], "Resources", "empirical_coefficients", "building_comfort")

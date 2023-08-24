@@ -552,6 +552,7 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
             AS SELECT   {ID_FIELD_BUILD},
                         {GEOM_FIELD},
                         {HEIGHT_FIELD},
+                        {BUILDING_WWR},
                         CASE WHEN   {BUILDING_AGE} > 1974 
                                     OR {BUILDING_AGE} > 1974 AND {BUILDING_RENOVATION} = 1
                              THEN 2
@@ -1388,6 +1389,7 @@ def calc_street_indic(cursor, blocks, rect_city, crosswind_lines, wind_dir):
                     ID_UPSTREAM))
                         
     # Calculates the mean density of street number and gather with previous indicator
+    # Calculates also the fraction of opening of the park on the streets
     cursor.execute(
         """ 
         {0};{1};{10};{11};
@@ -1397,7 +1399,8 @@ def calc_street_indic(cursor, blocks, rect_city, crosswind_lines, wind_dir):
                         a.{9},
                         a.{4},
                         a.{5},
-                        AVG(b.STREET_NUMBER_DENSITY) AS {6}
+                        AVG(b.STREET_NUMBER_DENSITY) AS {6},
+                        AVG(b.STREET_NUMBER_DENSITY) * a.{5} AS {12}
             FROM {7} AS a LEFT JOIN {8} AS b
             ON a.{3} = b.{3} AND a.{9} = b.{9}
             GROUP BY b.{3}, a.{4}, a.{9}
@@ -1416,7 +1419,8 @@ def calc_street_indic(cursor, blocks, rect_city, crosswind_lines, wind_dir):
                                          isSpatial=False),
                     DataUtil.createIndex(tableName=second_street_indic_buf, 
                                          fieldName=ID_UPSTREAM,
-                                         isSpatial=False)))
+                                         isSpatial=False),
+                    OPENING_FRACTION))
     
     # Delete temporary tables if not debug mode              
     if not DEBUG:
