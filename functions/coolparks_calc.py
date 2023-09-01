@@ -264,7 +264,7 @@ def calc_park_effect(df_indic, tair, ws_norm, dpv_norm, day_hour):
             T_park: pd.Series
                 Air temperature within each cell of a park due to its park ground
                 and canopy type"""
-    # First calculates the surface temperature and cooling rate for each combination
+    # First calculates the (surface temperature - Tin) and cooling rate for each combination
     # of ground and canopy type met in the park for the given weather condition
     combi_col_names = df_indic.columns
     combi_col_names = combi_col_names.drop(["ID", "ID_ROW", "ID_COL", D_PARK_INPUT, D_PARK_OUTPUT, 
@@ -272,7 +272,7 @@ def calc_park_effect(df_indic, tair, ws_norm, dpv_norm, day_hour):
                                             BLOCK_SURF_FRACTION, GEOM_MEAN_BUILD_HEIGHT,
                                             STREET_WIDTH, NB_STREET_DENSITY, FREE_FACADE_FRACTION,
                                             MEAN_BUILD_HEIGHT, OPENING_FRACTION])
-    df_ts = COEF_SURF_TEMP[day_hour].loc[combi_col_names, "a0"] + COEF_SURF_TEMP[day_hour].loc[combi_col_names, "a1"] * ws_norm +\
+    df_dts = COEF_SURF_TEMP[day_hour].loc[combi_col_names, "a0"] + COEF_SURF_TEMP[day_hour].loc[combi_col_names, "a1"] * ws_norm +\
         COEF_SURF_TEMP[day_hour].loc[combi_col_names, "a2"] * dpv_norm + COEF_SURF_TEMP[day_hour].loc[combi_col_names, "a12"] * ws_norm * dpv_norm
     df_cr = COEF_COOLING_RATE[day_hour].loc[combi_col_names, "a0"] + COEF_COOLING_RATE[day_hour].loc[combi_col_names, "a1"] * ws_norm +\
         COEF_COOLING_RATE[day_hour].loc[combi_col_names, "a2"] * dpv_norm + COEF_COOLING_RATE[day_hour].loc[combi_col_names, "a12"] * ws_norm * dpv_norm    
@@ -289,8 +289,7 @@ def calc_park_effect(df_indic, tair, ws_norm, dpv_norm, day_hour):
     #   - weight the Tout - Tin difference by the fraction of the corridor covered by the park
     one_minus_cr_n = pd.DataFrame({i: (1 - df_cr[i])**(n) for i in df_cr.index}, index = n.index)
     T_park = (df_indic[combi_col_names].mul(tair, axis = 0)\
-        .multiply(one_minus_cr_n,  axis = 1) \
-            + df_indic[combi_col_names].mul((1 - one_minus_cr_n).mul(df_ts), axis = 0)\
+            + df_indic[combi_col_names].mul((1 - one_minus_cr_n).mul(df_dts), axis = 0)\
                 ).sum(axis = 1)
     T_park = tair + (T_park - tair) * (df_indic[CORRIDOR_PARK_FRAC])
     

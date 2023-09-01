@@ -118,11 +118,11 @@ class CoolParksProcessorAlgorithm(QgsProcessingAlgorithm):
         # Creates the output folder if it does not exist
         if os.path.exists(scenarioDirectory + os.sep + OUTPUT_PROCESSOR_FOLDER):
             if os.path.exists(scenarioDirectory + os.sep + OUTPUT_PROCESSOR_FOLDER + os.sep + prefix):
-                raise QgsProcessingException(f'{prefix} folder already exists in {scenarioDirectory + os.sep + OUTPUT_PROCESSOR_FOLDER}')
+                raise QgsProcessingException(f'"{prefix}" folder already exists in "{scenarioDirectory + os.sep + OUTPUT_PROCESSOR_FOLDER}"')
             else:
                 os.mkdir(scenarioDirectory + os.sep + OUTPUT_PROCESSOR_FOLDER + os.sep + prefix)   
         else:
-            raise QgsProcessingException(f'{scenarioDirectory} should contain a folder called "{OUTPUT_PROCESSOR_FOLDER}". It is not the directory of a preprocessed scenario.')
+            raise QgsProcessingException(f'"{scenarioDirectory}" should contain a folder called "{OUTPUT_PROCESSOR_FOLDER}". It is not the directory of a preprocessed scenario.')
         
 
         # if feedback:
@@ -133,11 +133,22 @@ class CoolParksProcessorAlgorithm(QgsProcessingAlgorithm):
         #                                 profileFile,
         #                                 meshSize, dz)
         
+        if feedback:
+            feedback.setProgressText("Calculate park effect on air temperature")
+            if feedback.isCanceled():
+                feedback.setProgressText("Calculation cancelled by user")
+                return {}
         # Calculates the effect of the park on its surrounding
         mainCalculations.calcParkInfluence(weatherFilePath = weatherFile, 
                                            preprocessOutputPath = scenarioDirectory,
-                                           prefix = prefix)
+                                           prefix = prefix,
+                                           feedback = feedback)
         
+        if feedback:
+            feedback.setProgressText("Calculate park effect on building energy and thermal comfort")
+            if feedback.isCanceled():
+                feedback.setProgressText("Calculation cancelled by user")
+                return {}
         # Calculates the impact of the cooling on the buildings
         mainCalculations.calcBuildingImpact(preprocessOutputPath = scenarioDirectory,
                                             prefix = prefix)
@@ -161,7 +172,7 @@ class CoolParksProcessorAlgorithm(QgsProcessingAlgorithm):
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return self.tr('Calculates park effects')
+        return self.tr('2. Calculate park effects')
 
     def group(self):
         """

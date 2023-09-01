@@ -35,7 +35,7 @@ from processing.core.ProcessingConfig import ProcessingConfig
 
 from .preprocessing_algorithm import CoolParksPreparerAlgorithm
 from .processing_algorithm import CoolParksProcessorAlgorithm
-# from .postprocessing_algorithm import CoolParksAnalyzerAlgorithm
+from .postprocessing_algorithm import CoolParksAnalyzerAlgorithm
 
 import os.path
 from qgis.PyQt.QtGui import QIcon
@@ -73,7 +73,7 @@ class ProcessingCoolParksProvider(QgsProcessingProvider):
         self.addAlgorithm(CoolParksProcessorAlgorithm())
 
         # #Postprocessor
-        # self.addAlgorithm(CoolParksAnalyzerAlgorithm())
+        self.addAlgorithm(CoolParksAnalyzerAlgorithm())
 
     def id(self):
         """

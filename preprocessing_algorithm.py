@@ -298,7 +298,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                 park_bound_file = park_bound_file.split("|layername")[0]
             srid_park_bound = inputParkBoundLayer.crs().postgisSrid()
             if srid_build != srid_park_bound:
-                feedback.pushWarning('Coordinate system of input building layer and park boundaries!')
+                feedback.pushWarning('Coordinate system of input building layer and park boundaries differs!')
 
         # Get park ground layer, check that it has the same SRID as building layer
         # and then get the file directory of the layer
@@ -310,7 +310,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                 park_ground_file = park_ground_file.split("|layername")[0]
             srid_park_ground = inputParkGroundLayer.crs().postgisSrid()
             if srid_build != srid_park_ground:
-                feedback.pushWarning('Coordinate system of input building layer and park ground!')
+                feedback.pushWarning('Coordinate system of input building layer and park ground differs!')
 
         # Get park canopy layer, check that it has the same SRID as building layer
         # and then get the file directory of the layer
@@ -322,7 +322,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                 park_canopy_file = park_canopy_file.split("|layername")[0]
             srid_park_canopy = inputParkCanopyLayer.crs().postgisSrid()
             if srid_build != srid_park_canopy:
-                feedback.pushWarning('Coordinate system of input building layer and park canopy!')
+                feedback.pushWarning('Coordinate system of input building layer and park canopy differs!')
 
         
         # Defines outputs
@@ -373,7 +373,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                                         nAlongWind = N_ALONG_WIND_PARK,
                                         nCrossWind = N_CROSS_WIND_PARK,
                                         nCrossWindOut = N_CROSS_WIND_OUTSIDE,
-                                        feedback = None,
+                                        feedback = feedback,
                                         output_directory = outputDirectory,
                                         prefix = prefix)
         
@@ -397,7 +397,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return self.tr('Prepare data')
+        return self.tr('1. Prepare data')
 
     def group(self):
         """

@@ -31,7 +31,7 @@ INSTANCE_NAME = "coolparks"
 INSTANCE_ID ="sa"
 INSTANCE_PASS = "sa"
 NEW_DB = True
-ADD_SUFFIX_NAME = False
+ADD_SUFFIX_NAME = True
 
 # Where to save the current JAVA path
 JAVA_PATH_FILENAME = "JavaPath.csv"
@@ -227,7 +227,6 @@ BASIC_COOLING = -0.11
 # Dates used for calculation
 START_DATE = "01/06"
 END_DATE = "01/09"
-END_DATE = "10/06"
 
 # Generic names for meteorological variables
 WDIR = "wdir"
@@ -299,3 +298,9 @@ TRANSPORT_MIN_VAL = pd.read_csv(TRAINING_TRANSPORT_PATH + os.sep + f"training_da
 # Empirical model coefficients for building energy and building thermal comfort
 BUILD_ENERGY_PATH = os.path.join(Path(os.path.dirname(os.path.abspath(__file__))).parents[0], "Resources", "empirical_coefficients", "building_energy")
 BUILD_COMFORT_PATH = os.path.join(Path(os.path.dirname(os.path.abspath(__file__))).parents[0], "Resources", "empirical_coefficients", "building_comfort")
+
+
+#############################################################################
+#################### POSTPROCESSING INFORMATIONS ############################
+#############################################################################
+LIST_OF_CHANGES = pd.Series(['park', 'city', 'weather'])
