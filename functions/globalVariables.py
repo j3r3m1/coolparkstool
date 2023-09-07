@@ -11,7 +11,8 @@ import tempfile
 import os
 from pathlib import Path
 
-DEFAULT_PREFIX = "default"
+DEFAULT_SCENARIO = "Reference_scenario"
+DEFAULT_WEATHER = "Reference_weather"
 
 OUTPUT_RASTER_EXTENSION = ".Gtiff"
 DELETE_OUTPUT_IF_EXISTS = True
@@ -31,7 +32,7 @@ INSTANCE_NAME = "coolparks"
 INSTANCE_ID ="sa"
 INSTANCE_PASS = "sa"
 NEW_DB = True
-ADD_SUFFIX_NAME = True
+ADD_SUFFIX_NAME = False
 
 # Where to save the current JAVA path
 JAVA_PATH_FILENAME = "JavaPath.csv"
@@ -64,6 +65,9 @@ N_ALONG_WIND_PARK = 15  # equivalent to 10 cells before the park, 10 within and 
 
 # min cell size (m)
 MIN_CELL_SIZE = 20
+
+# Number of cells in the output raster
+NB_OUTPUT_CELL = 10 * (N_CROSS_WIND_OUTSIDE + N_CROSS_WIND_PARK) * N_ALONG_WIND_PARK
 
 # Cross wind lines distance
 CROSSWIND_LINE_DIST = 8
@@ -188,8 +192,8 @@ BLOCK_BUFFER_INDIC = 50
 # Default values for building characteristics
 BUILDING_DEFAULT_AGE = 1970
 BUILDING_DEFAULT_RENOVATION = False
-BUILDING_DEFAULT_HEIGHT = 3
-BUILDING_DEFAULT_WINDOWS_WALL_RATIO = 0.25
+BUILDING_DEFAULT_HEIGHT = 9
+BUILDING_DEFAULT_WINDOWS_WALL_RATIO = 0.2
 
 # Building properties per building age
 BUILDING_PROPERTIES = pd.DataFrame({"Name": ["Construit avant 1974 et non rénové thermiquement",
@@ -303,4 +307,18 @@ BUILD_COMFORT_PATH = os.path.join(Path(os.path.dirname(os.path.abspath(__file__)
 #############################################################################
 #################### POSTPROCESSING INFORMATIONS ############################
 #############################################################################
-LIST_OF_CHANGES = pd.Series(['park', 'city', 'weather'])
+ENERGY_IMPACT_ABS = "ENERGY_IMPACT_ABS"
+ENERGY_IMPACT_REL = "ENERGY_IMPACT_REL"
+THERM_COMFORT_IMPACT_ABS = "THERM_COMFORT_IMPACT_ABS"
+THERM_COMFORT_IMPACT_REL = "THERM_COMFORT_IMPACT_REL"
+BUILDING_LEGEND = pd.Series({ENERGY_IMPACT_ABS: "",
+                             ENERGY_IMPACT_REL: "",
+                             THERM_COMFORT_IMPACT_ABS: "",
+                             THERM_COMFORT_IMPACT_REL: ""})
+LIST_OF_CHANGES = pd.Series(['park composition', 'urban morphology', 'weather'])
+DEFAULT_OPACITY = 0.75
+NB_ISOVALUES = 9
+NB_SIGN_DIGITS = 2
+REF_SCEN = "REFERENCE_SCENARIO"
+ALT_SCEN = "ALTERNATIVE_REFERENCE_SCENARIO"
+DIFF_SCEN = "DIFF_SCEN"

@@ -83,7 +83,12 @@ class CoolParksProcessorAlgorithm(QgsProcessingAlgorithm):
         """
         
         # We add the input parameters
-        # First the layers used as input and output
+        self.addParameter(
+            QgsProcessingParameterString(
+                self.WEATHER_SCENARIO,
+                self.tr('Meteorological scenario name'),
+                defaultValue = DEFAULT_WEATHER,
+                optional = False)) 
         self.addParameter(
             QgsProcessingParameterFile(
                 self.SCENARIO_DIRECTORY,
@@ -93,12 +98,6 @@ class CoolParksProcessorAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFile(
                 self.WEATHER_FILE,
                 self.tr('Input meteorological file (.txt or .csv)')))
-        self.addParameter(
-            QgsProcessingParameterString(
-                self.WEATHER_SCENARIO,
-                self.tr('Name of the meteorological scenario'),
-                defaultValue = DEFAULT_PREFIX,
-                optional = False)) 
 
     def processAlgorithm(self, parameters, context, feedback):
         """
@@ -195,14 +194,16 @@ class CoolParksProcessorAlgorithm(QgsProcessingAlgorithm):
         return QCoreApplication.translate('Processing', string)
     
     def shortHelpString(self):
-        return self.tr('The CoolParksTool prepare plugin can be used to prepare '+\
-                       'the spatial data that are used in the CoolParksTool'+
-                       ' models'+
+        return self.tr("""The CoolParksTool '2. Calculate park effects' module is used 
+                       to calculate:\n
+                           - the effect of the park composition on the cooling,
+                           - the effect of the urban morphology on the transport of cool air,
+                           - the effect of the cool air on building energy and building 
+                           thermal comfort"""
         '\n'
         '\n'
-        'This tools requires Java. If Java is not installed on your system,'+ 
-        'visit www.java.com and install the latest version. Make sure to install correct version '+
-        'based on your system architecture (32- or 64-bit).'
+        """You need to first use the '1. Prepare data' for each new scenario you 
+        want to simulate."""
         '\n'
         '\n'
         '---------------\n'

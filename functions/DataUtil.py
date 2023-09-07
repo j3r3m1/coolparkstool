@@ -249,3 +249,34 @@ def windDirectionFromXY(windSpeedEast, windSpeedNorth):
         radAngle[(windSpeedEast>=0)&(windSpeedNorth<0)] + 2*np.pi
     
     return radAngle
+
+def round_to(number, ndecim):
+    return round(number, ndecim - int(np.floor(np.log10(abs(number))) + 1))
+
+def trunc_to(x, sign_nb, upper = True):
+	"""Return a truncated decimal (or integer) number with "sign_nb" significative numbers
+	
+		Parameters
+	_ _ _ _ _ _ _ _ _ _ 
+	
+			x : number (float, int, etc.)
+				Number we want to set the number of significative numbers
+			sign_nb : int
+				Number of significative number we want to keep for x
+			upper : boolean, default False
+				Whether or not the truncature is done to the upper value (ex : trunc_to(0.1235, 2, up = False) = 0.12 trunc_to(0.1235, 2, up = True) = 0.13
+				
+		Returns
+	_ _ _ _ _ _ _ _ _ _ 
+	
+			Return a decimal (or integer) number with "sign_nb" significative numbers"""
+			
+	if x==0 or np.isnan(x):
+		return x
+	else:
+		shift_nb = -int(np.floor(np.log10(abs(x))))+sign_nb-1
+		if upper is True:
+			add_up = 1. / 10 ** shift_nb
+		else:
+			add_up = 0
+		return round_to(np.trunc(x * 10 ** shift_nb) / 10 ** shift_nb + add_up, sign_nb)

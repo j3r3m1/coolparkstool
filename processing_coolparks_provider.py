@@ -81,7 +81,7 @@ class ProcessingCoolParksProvider(QgsProcessingProvider):
         string should be a unique, short, character only string, eg "qgis" or
         "gdal". This string should not be localised.
         """
-        return 'coolparkstool'
+        return 'CoolParksTool'
 
     def name(self):
         """
@@ -90,7 +90,7 @@ class ProcessingCoolParksProvider(QgsProcessingProvider):
 
         This string should be short (e.g. "Lastools") and localised.
         """
-        return 'coolparkstool'
+        return 'CoolParksTool'
         
     def icon(self):
         """

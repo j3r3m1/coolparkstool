@@ -209,7 +209,7 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
             FROM ST_MakeGridPoints((SELECT ST_ENVELOPE(ST_ACCUM({GEOM_FIELD})) AS {GEOM_FIELD} FROM {rec_coord_city}), 
                                    (SELECT ({park_bb_xsize}+{dx}*({nCrossWindOut}-1))/(MAX(ID)-1) 
                                             FROM {rec_coord_city}), 
-                                   (3*{park_bb_ysize})/({N_ALONG_WIND_PARK}+2)) AS {GEOM_FIELD}
+                                   (3*{park_bb_ysize})/({N_ALONG_WIND_PARK})) AS {GEOM_FIELD}
             WHERE   ID_COL <= (SELECT MAX(ID) FROM {rec_coord_city})
                     AND ID_ROW <= {N_ALONG_WIND_PARK};
         """)
@@ -439,12 +439,12 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
             None """    
     # Explode the potential multipolygons in canopy and ground park data and replace string types by numbers
     sql_ctype_conv = ["WHEN {0} = ''{1}'' THEN {2} ".format(TYPE,
-                                                               S_CANOPY[i],
-                                                               i)
+                                                            S_CANOPY[i],
+                                                            i)
                           for i in S_CANOPY.index] + ["ELSE NULL END"]
     sql_gtype_conv = ["WHEN {0} = ''{1}'' THEN {2} ".format(TYPE,
-                                                               S_GROUND[i],
-                                                               i)
+                                                            S_GROUND[i],
+                                                            i)
                           for i in S_GROUND.index] + ["ELSE NULL END"]
     cursor.execute(
         """
@@ -1210,7 +1210,7 @@ def calc_street_indic(cursor, blocks, rect_city, crosswind_lines, wind_dir):
                         {5},
                         ST_LENGTH({5}) AS {6}
             FROM ST_EXPLODE('(  SELECT  a.{3}, 
-                                        ST_DIFFERENCE(a.{5}, ST_ACCUM(b.{5})) AS {5}
+                                        ST_DIFFERENCE(a.{5}, ST_UNION(ST_ACCUM(b.{5}))) AS {5}
                                 FROM {7} AS a, {8} AS b
                                 WHERE a.{5} && b.{5} AND ST_INTERSECTS(a.{5}, b.{5})
                                 GROUP BY a.{5}, a.{3})')

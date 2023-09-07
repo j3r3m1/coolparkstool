@@ -3,6 +3,6 @@
 "name": "park_ground",
 "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::2154" } },
 "features": [
-{ "type": "Feature", "properties": { "TYPE": "sol nu" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 355025.0, 6687866.0 ], [ 355025.0, 6688066.0 ], [ 355225.0, 6688066.0 ], [ 355225.0, 6687866.0 ], [ 355025.0, 6687866.0 ] ] ] ] } }
+{ "type": "Feature", "properties": { "TYPE": "herbace" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 355025.0, 6687866.0 ], [ 355025.0, 6688066.0 ], [ 355225.0, 6688066.0 ], [ 355225.0, 6687866.0 ], [ 355025.0, 6687866.0 ] ] ] ] } }
 ]
 }

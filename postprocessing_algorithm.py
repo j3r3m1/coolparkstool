@@ -60,10 +60,11 @@ import inspect
 import unidecode
 import processing
 
-from .functions.coolparks_postprocess import loadCoolParksRaster
+from .functions.coolparks_postprocess import loadCoolParksRaster, loadCoolParksVector
 from .functions import mainCalculations
 from .functions.globalVariables import *
 from .functions import WriteMetadata
+from .functions.DataUtil import trunc_to, round_to
 
 
 class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
@@ -88,17 +89,6 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
         """
         
         # We add the input parameters
-        # First the layers used as input and output
-        self.addParameter(
-            QgsProcessingParameterFile(
-                self.SCENARIO_REF_DIRECTORY,
-                self.tr('Directory of the reference scenario'),
-                behavior=QgsProcessingParameterFile.Folder))
-        self.addParameter(
-            QgsProcessingParameterFile(
-                self.SCENARIO_ALT_DIRECTORY,
-                self.tr('Directory of the alternative scenario'),
-                behavior=QgsProcessingParameterFile.Folder))
         self.addParameter(
            QgsProcessingParameterEnum(
                self.CHANGES, 
@@ -106,6 +96,16 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
                LIST_OF_CHANGES.values,
                defaultValue=None,
                optional = False))
+        self.addParameter(
+            QgsProcessingParameterFile(
+                self.SCENARIO_REF_DIRECTORY,
+                self.tr('Directory of the reference scenario (select the weather folder)'),
+                behavior=QgsProcessingParameterFile.Folder))
+        self.addParameter(
+            QgsProcessingParameterFile(
+                self.SCENARIO_ALT_DIRECTORY,
+                self.tr('Directory of the alternative scenario (select the weather folder)'),
+                behavior=QgsProcessingParameterFile.Folder))
         self.addParameter(
             QgsProcessingParameterFolderDestination(
                 self.OUTPUT_DIRECTORY,
@@ -133,7 +133,7 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(f'You are proposing to compare the same scenarios...')
         if changes_string == "weather":
             if (Path(refScenarioDirectory).parent != Path(altScenarioDirectory).parent):
-                raise QgsProcessingException(f'The alternative and reference scenarios should have been saved in the same scenario folder')
+                raise QgsProcessingException(f'The alternative and reference weather should be saved in the same scenario folder')
         else:
             extent_ref = processing.run("native:polygonfromlayerextent",
                                         {'INPUT':refScenarioDirectory + os.sep + BUILD_INDEP_VAR + ".geojson",
@@ -151,7 +151,15 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
             if gpd.read_file(tempo_overlap).loc[0, "Extent_pc"] < 50:
                 raise QgsProcessingException(f'Reference and alternative scenario are not located in the same area')
         
-
+        # Test that the parks have exactly the same shape (only composition should differ !!)
+        park_ref = gpd.read_file(os.path.join(Path(refScenarioDirectory).parent.parent.as_uri(), 
+                                              OUTPUT_PREPROCESSOR_FOLDER,
+                                              PARK_BOUNDARIES_TAB + ".geojson"))
+        park_alt = gpd.read_file(os.path.join(Path(altScenarioDirectory).parent.parent.as_uri(), 
+                                              OUTPUT_PREPROCESSOR_FOLDER, 
+                                              PARK_BOUNDARIES_TAB + ".geojson"))
+        if (park_ref.intersection(park_alt).area != park_ref.area)[0]:
+            raise QgsProcessingException(f'Only park composition should differ between the reference and alternative parks. In your case, park shape differs')
 
         # if feedback:
         #     feedback.setProgressText("Writing settings for this model run to specified output folder (Filename: RunInfoURock_YYYY_DOY_HHMM.txt)")
@@ -163,7 +171,7 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
         
         # Calculates the difference of effects between the two scenarios
         finalDirectory, dict_build_glob, diff_build_path, diff_deltaT_path,\
-            diff_T_path, diff_build_extremums = \
+            diff_T_path, diff_build_extremums, dict_deltaT_glob = \
                 mainCalculations.compareScenarios(refScenarioDirectory = refScenarioDirectory, 
                                                   altScenarioDirectory = altScenarioDirectory,
                                                   change = changes_string,
@@ -203,42 +211,129 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
                 if layer_stat['MIN'] < T_min_value:
                     T_min_value = layer_stat['MIN']
                 if layer_stat['MAX'] > T_max_value:
-                    T_max_value = layer_stat['MAX']                
+                    T_max_value = layer_stat['MAX']      
                     
-        # Load the resulting GIS layers into QGIS with a given style
-        for tp in [DAY_TIME, NIGHT_TIME]:
-            if diff_deltaT_path[tp]:                
-                loadCoolParksRaster(filepath = diff_deltaT_path[tp],
-                                    specific_scale = True,
-                                    subgroup = new_group,
-                                    raster_min = deltaT_min_value,
-                                    raster_max = deltaT_max_value,
-                                    feedback = feedback,
-                                    context = context)
-            if diff_T_path[tp]:                
-                loadCoolParksRaster(filepath = diff_T_path[tp],
-                                    specific_scale = False,
-                                    subgroup = new_group,
-                                    raster_min = T_min_value,
-                                    raster_max = T_max_value,
-                                    feedback = feedback,
-                                    context = context)
+        # Calculates the number of significant digits
+        if NB_ISOVALUES < 10:
+            sign_digits = 1
+        else:
+            sign_digits = 2
         
-        # if diff_build_path:
-        #     for var in diff_build_extremums:
-        #         loadCoolParksVector(filepath = diff_build_path,
-        #                             variable = var,
-        #                             subgroup = new_group,
-        #                             vector_min = diff_build_extremums[var][0],
-        #                             vector_max = diff_build_extremums[var][1],
-        #                             feedback = feedback,
-        #                             context = context)
+        # Convert the raster layers into contours and load the resulting layers into QGIS with a given style
+        for tp in [DAY_TIME, NIGHT_TIME]:
+            if diff_deltaT_path[tp]:                     
+                # Calculate interval size
+                interval_isovalues_dT = trunc_to((deltaT_max_value-deltaT_min_value) / NB_ISOVALUES,
+                                                 sign_digits,
+                                                 True)
+                
+                # Convert the raster results into contours
+                processing.run("gdal:contour_polygon", 
+                               {'INPUT':diff_deltaT_path[tp],
+                                'BAND':1,
+                                'INTERVAL':f'{interval_isovalues_dT}',
+                                'CREATE_3D':False,
+                                'IGNORE_NODATA':False,
+                                'NODATA':None,
+                                'OFFSET':f'{0 + interval_isovalues_dT / 2}',
+                                'EXTRA':'','FIELD_NAME_MIN':'ELEV_MIN',
+                                'FIELD_NAME_MAX':'ELEV_MAX',
+                                'OUTPUT': diff_deltaT_path[tp] + ".geojson"})   
+                
+                # Load the vector layer with a given style
+                loadCoolParksVector(filepath = diff_deltaT_path[tp] + ".geojson",
+                                    layername = f"Cooling (alt - ref) at {tp}:00 (°C)",
+                                    variable = None,
+                                    subgroup = new_group,
+                                    vector_min = deltaT_min_value,
+                                    vector_max = deltaT_max_value,
+                                    feedback = feedback,
+                                    context = context,
+                                    valueZero = 0,
+                                    opacity = DEFAULT_OPACITY)
+
+                # loadCoolParksRaster(filepath = diff_deltaT_path[tp],
+                #                     specific_scale = True,
+                #                     subgroup = new_group,
+                #                     raster_min = deltaT_min_value,
+                #                     raster_max = deltaT_max_value,
+                #                     feedback = feedback,
+                #                     context = context)
+            if diff_T_path[tp]:        
+                # Calculate interval size
+                interval_isovalues_T = trunc_to((T_max_value-T_min_value) / NB_ISOVALUES,
+                                                sign_digits,
+                                                True)
+                # Convert the raster results into contours
+                processing.run("gdal:contour_polygon", 
+                               {'INPUT':diff_T_path[tp],
+                                'BAND':1,
+                                'INTERVAL':f'{interval_isovalues_T}',
+                                'CREATE_3D':False,
+                                'IGNORE_NODATA':False,
+                                'NODATA':None,
+                                'OFFSET':f'{0 + interval_isovalues_T / 2}',
+                                'EXTRA':'','FIELD_NAME_MIN':'ELEV_MIN',
+                                'FIELD_NAME_MAX':'ELEV_MAX',
+                                'OUTPUT': diff_T_path[tp] + ".geojson"}) 
+                
+                # Load the vector layer with a given style
+                loadCoolParksVector(filepath = diff_T_path[tp] + ".geojson",
+                                    layername = f"Air temperature (alt-ref) at {tp}:00 (°C)",
+                                    variable = None,
+                                    subgroup = new_group,
+                                    vector_min = T_min_value,
+                                    vector_max = T_max_value,
+                                    feedback = feedback,
+                                    context = context,
+                                    valueZero = 0,
+                                    opacity = DEFAULT_OPACITY)
+                
+                # loadCoolParksRaster(filepath = diff_T_path[tp],
+                #                     specific_scale = False,
+                #                     subgroup = new_group,
+                #                     raster_min = T_min_value,
+                #                     raster_max = T_max_value,
+                #                     feedback = feedback,
+                #                     context = context)
+        
+        if diff_build_path:
+            for var in diff_build_extremums:
+                loadCoolParksVector(filepath = diff_build_path,
+                                    layername = var,
+                                    variable = var,
+                                    subgroup = new_group,
+                                    vector_min = diff_build_extremums[var][0],
+                                    vector_max = diff_build_extremums[var][1],
+                                    feedback = feedback,
+                                    context = context,
+                                    valueZero = 0,
+                                    opacity = 1)
+        
+        print("test")
         
         # Return the output file names
         return {self.OUTPUT_DIRECTORY: finalDirectory,
-                'Global building differences': dict_build_glob}
-
-
+                f'A.1. Average air temperature modification at {DAY_TIME}:00 in the city due to the park in '+ \
+                f'the reference scenario': dict_deltaT_glob[DAY_TIME][REF_SCEN] + '°C',
+                f'A.2. Average air temperature modification at {DAY_TIME}:00 in the city due to the park in'+\
+                f'the alternative scenario': dict_deltaT_glob[DAY_TIME][ALT_SCEN] + '°C',
+                f'A.3. Average air temperature modification at {DAY_TIME}:00 in the city due to the park in '+\
+                f'the alternative scenario compared to the reference one': dict_deltaT_glob[DAY_TIME][DIFF_SCEN] + '°C   ',
+                f'B.1. Average air temperature modification at {NIGHT_TIME}:00 in the city due to the park in '+ \
+                f'the reference scenario': dict_deltaT_glob[NIGHT_TIME][REF_SCEN] + '°C',
+                f'B.2. Average air temperature modification at {NIGHT_TIME}:00 in the city due to the park in '+ \
+                f'the alternative scenario': dict_deltaT_glob[NIGHT_TIME][ALT_SCEN] + '°C',
+                f'B.3. Average air temperature modification at {NIGHT_TIME}:00 in the city due to the park in '+ \
+                f'the alternative scenario compared to the reference one': dict_deltaT_glob[NIGHT_TIME][DIFF_SCEN] + '°C   ',
+                f'C.1. Total building energy need saved thanks to the park in '+ \
+                f'the reference scenario': f'{dict_build_glob["ENERGY_IMPACT_REF"]}',
+                f'C.2. Total building energy need saved thanks to the park in '+ \
+                f'the alternative scenario': f'{dict_build_glob["ENERGY_IMPACT_ALT"]}',
+                f'C.3. Total building energy need saved thanks to the park in '+ \
+                f'the alternative scenario compared to the reference one': f'{dict_build_glob["ENERGY_IMPACT_DIFF"]}'
+                }
+    
     def name(self):
         """
         Returns the algorithm name, used for identifying the algorithm. This
@@ -277,14 +372,15 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
         return QCoreApplication.translate('Processing', string)
     
     def shortHelpString(self):
-        return self.tr('The CoolParksTool prepare plugin can be used to prepare '+\
-                       'the spatial data that are used in the CoolParksTool'+
-                       ' models'+
+        return self.tr("""The CoolParksTool '3. Compare two scenario' module is used 
+                       to compare two scenarios when:\n
+                           - only the park composition differs,
+                           - only the urban morphology differs,
+                           - only the weather conditions differ."""
         '\n'
         '\n'
-        'This tools requires Java. If Java is not installed on your system,'+ 
-        'visit www.java.com and install the latest version. Make sure to install correct version '+
-        'based on your system architecture (32- or 64-bit).'
+        """You need to first use the '2. Calculate park effect' for the two scenarios you 
+        want to simulate."""
         '\n'
         '\n'
         '---------------\n'

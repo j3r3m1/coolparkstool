@@ -105,6 +105,14 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         with some other properties.
         """
         
+        
+        self.addParameter(
+            QgsProcessingParameterString(
+                self.SCENARIO_NAME,
+                self.tr('Scenario name for the current urban morphology and park'),
+                defaultValue = DEFAULT_SCENARIO,
+                optional = False)) 
+        
         # We add the input parameters
         # First the layers used as input and output
         self.addParameter(
@@ -133,7 +141,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterField(
                 self.BUILD_AGE_FIELD,
-                self.tr('Building age field'),
+                self.tr('Building construction year'),
                 None,
                 self.BUILDING_TABLE_NAME,
                 QgsProcessingParameterField.Numeric,
@@ -141,7 +149,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.DEFAULT_BUILD_AGE,
-                self.tr('Default building age (construction year)'),
+                self.tr('Default building construction year'),
                 QgsProcessingParameterNumber.Integer,
                 BUILDING_DEFAULT_AGE,
                 True))
@@ -222,12 +230,6 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFolderDestination(
                 self.OUTPUT_DIRECTORY,
                 self.tr('Directory to save the outputs')))
-        self.addParameter(
-            QgsProcessingParameterString(
-                self.SCENARIO_NAME,
-                self.tr('Name of the geospatial scenario'),
-                defaultValue = DEFAULT_PREFIX,
-                optional = False)) 
 
     def processAlgorithm(self, parameters, context, feedback):
         """
@@ -420,9 +422,11 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         return QCoreApplication.translate('Processing', string)
     
     def shortHelpString(self):
-        return self.tr('The CoolParksTool prepare plugin can be used to prepare '+\
-                       'the spatial data that are used in the CoolParksTool'+
-                       ' models'+
+        return self.tr("""The CoolParksTool '1. Prepare data' module is used 
+                       to characterize a given scenario:
+                           - the park composition along several wind directions,
+                           - the urban morphology along several wind directions,
+                           - the building types"""
         '\n'
         '\n'
         'This tools requires Java. If Java is not installed on your system,'+ 
