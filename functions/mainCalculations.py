@@ -45,7 +45,6 @@ def prepareData(plugin_directory,
                 default_build_wwr = BUILDING_DEFAULT_WINDOWS_WALL_RATIO,
                 nAlongWind = N_ALONG_WIND_PARK,
                 nCrossWind = N_CROSS_WIND_PARK,
-                nCrossWindOut = N_CROSS_WIND_OUTSIDE,
                 feedback = None,
                 output_directory = TEMPO_DIRECTORY,
                 prefix = DEFAULT_SCENARIO):
@@ -95,18 +94,18 @@ def prepareData(plugin_directory,
                                srid = srid)
         
     # Modify and filter input data
-    prep_fct.modifyInputData(cursor = cursor, 
-                             tempo_park_canopy = tempo_park_canopy, 
-                             tempo_park_ground = tempo_park_ground, 
-                             tempo_build = tempo_build,
-                             build_height = build_height,
-                             build_age = build_age,
-                             build_renovation = build_renovation,
-                             build_wwr = build_wwr,
-                             default_build_height = default_build_height, 
-                             default_build_age = default_build_age,
-                             default_build_renov = default_build_renov,
-                             default_build_wwr = default_build_wwr)
+    distance_max =  prep_fct.modifyInputData(cursor = cursor, 
+                                             tempo_park_canopy = tempo_park_canopy, 
+                                             tempo_park_ground = tempo_park_ground, 
+                                             tempo_build = tempo_build,
+                                             build_height = build_height,
+                                             build_age = build_age,
+                                             build_renovation = build_renovation,
+                                             build_wwr = build_wwr,
+                                             default_build_height = default_build_height, 
+                                             default_build_age = default_build_age,
+                                             default_build_renov = default_build_renov,
+                                             default_build_wwr = default_build_wwr)
     
     # Test input data
     prep_fct.testInputData(cursor = cursor)
@@ -170,8 +169,7 @@ def prepareData(plugin_directory,
             prep_fct.creates_units_of_analysis(cursor = cursor, 
                                                park_boundary_tab = dicRotatedTables[PARK_BOUNDARIES_TAB],
                                                srid = srid, 
-                                               nCrossWind = nCrossWind,
-                                               nCrossWindOut = nCrossWindOut, 
+                                               nCrossWindTot = nCrossWind,
                                                wind_dir = d)
         
         # ----------------------------------------------------------------------
@@ -308,6 +306,11 @@ def calcParkInfluence(weatherFilePath,
     grid_ind_city_before, grid_ind_park, grid_ind_city_after = \
         calc_fct.identify_point_position(grid_indic)
     
+    # Fill missing ID_UPSTREAM since grid points may have not intersect some upstream city geometries
+    grid_ind_city_before = calc_fct.remove_null_upstream(grid_indic = grid_ind_city_before, start = 1)
+    grid_ind_park = calc_fct.remove_null_upstream(grid_indic = grid_ind_park, start = 1)
+    grid_ind_city_after = calc_fct.remove_null_upstream(grid_indic = grid_ind_city_after, start = 2)
+    
     # Rename the columns in the park indic dataframe (needed to have strings in SQL, int needed in Python)
     for d in grid_ind_park.keys():
         frac_cols = grid_ind_park[d].columns[grid_ind_park[d].columns.str.contains("FRAC_")]
@@ -375,6 +378,9 @@ def calcParkInfluence(weatherFilePath,
         # (sum on a different grid depending on wind direction)
         for d in df_met_sel.index:
             wd = df_met_sel.loc[d, WDIR]
+            if wd == 121:
+                grid_sum_deltatair[wd_range]
+            print(wd)
             wd_range = [i for i in dirs if (wd >= i and wd < i + 360./ndir)][0]
             weights[wd_range] += 1
             
@@ -415,6 +421,10 @@ def calcParkInfluence(weatherFilePath,
         output_dT_file = {}
         rlayer_T = {}
         rlayer_dT = {}
+        raster_t_list = []
+        raster_dt_list = []
+        average_formula_t = ""
+        average_formula_dt = ""
         i = 0
         weight_sum = weights.sum()
         for wd in grid_sum_tair.columns:
@@ -432,15 +442,15 @@ def calcParkInfluence(weatherFilePath,
                 processing.run("qgis:tininterpolation", 
                                {'INTERPOLATION_DATA':f'{TEMPO_DIRECTORY + os.sep + output_T_file[wd] + ".geojson"}::~::0::~::1::~::0',
                                 'METHOD':0,
-                                'EXTENT':f'{xmin},{xmax},{ymin},{ymax} [EPSG:{epsg}]',
+                                'EXTENT':f'{xmin-100},{xmax+100},{ymin-100},{ymax+100} [EPSG:{epsg}]',
                                 'PIXEL_SIZE':f'{output_grid_size}',
                                 'OUTPUT':f'{final_output_dir + os.sep + output_T_file[wd]}_{str(tp)}h.tif'})
                 processing.run("qgis:tininterpolation", 
                                {'INTERPOLATION_DATA':f'{TEMPO_DIRECTORY + os.sep + output_dT_file[wd] + ".geojson"}::~::0::~::1::~::0',
                                 'METHOD':0,
-                                'EXTENT':f'{xmin},{xmax},{ymin},{ymax} [EPSG:{epsg}]',
+                                'EXTENT':f'{xmin-100},{xmax+100},{ymin-100},{ymax+100} [EPSG:{epsg}]',
                                 'PIXEL_SIZE':f'{output_grid_size}',
-                                'OUTPUT':f'{TEMPO_DIRECTORY + os.sep + output_dT_file[wd]}'})
+                                'OUTPUT':f'{TEMPO_DIRECTORY + os.sep + output_dT_file[wd]}'})                
                 processing.run("gdal:cliprasterbymasklayer", 
                                {'INPUT':f'{TEMPO_DIRECTORY + os.sep + output_dT_file[wd]}',
                                 'MASK':TEMPO_DIRECTORY + os.sep + "city.geojson",
@@ -459,46 +469,70 @@ def calcParkInfluence(weatherFilePath,
                                 'EXTRA':'',
                                 'OUTPUT':f'{final_output_dir + os.sep + output_dT_file[wd]}_{str(tp)}h.tif'})
                 
-                # Average the temperature using grid from all directions
-                raster_t_buf = gdal.Open(f'{final_output_dir + os.sep + output_T_file[wd]}_{str(tp)}h.tif')
-                raster_dt_buf = gdal.Open(f'{final_output_dir + os.sep + output_dT_file[wd]}_{str(tp)}h.tif')
+                raster_t_list.append(f'{final_output_dir + os.sep + output_T_file[wd]}_{str(tp)}h.tif')
+                raster_dt_list.append(f'{final_output_dir + os.sep + output_dT_file[wd]}_{str(tp)}h.tif')
                 
-                array_t_buf = raster_t_buf.ReadAsArray()
-                array_dt_buf = raster_dt_buf.ReadAsArray()
-                array_t_buf[array_t_buf == -9999] = np.nan
-                array_dt_buf[array_dt_buf == -9999] = np.nan
-                if i==0:
-                    t_final = array_t_buf * weights[wd] / weight_sum
-                    dt_final = array_dt_buf * weights[wd] / weight_sum
+                average_formula_t += f' + {output_T_file[wd]}_{str(tp)}h@1 * {weights[wd]} / {weight_sum}'
+                average_formula_dt += f' + {output_dT_file[wd]}_{str(tp)}h@1 * {weights[wd]} / {weight_sum}'
+                
+                # # Average the temperature using grid from all directions
+                # raster_t_buf = gdal.Open(f'{final_output_dir + os.sep + output_T_file[wd]}_{str(tp)}h.tif')
+                # raster_dt_buf = gdal.Open(f'{final_output_dir + os.sep + output_dT_file[wd]}_{str(tp)}h.tif')
+                
+                # array_t_buf = raster_t_buf.ReadAsArray()
+                # array_dt_buf = raster_dt_buf.ReadAsArray()
+                # array_t_buf[array_t_buf == -9999] = np.nan
+                # array_dt_buf[array_dt_buf == -9999] = np.nan
+                # if i==0:
+                #     t_final = array_t_buf * weights[wd] / weight_sum
+                #     dt_final = array_dt_buf * weights[wd] / weight_sum
                     
-                    x_count_t, y_count_t = raster_t_buf.RasterXSize, raster_t_buf.RasterYSize
-                    x_count_dt, y_count_dt = raster_dt_buf.RasterXSize, raster_dt_buf.RasterYSize
-                    geotransform = raster_t_buf.GetGeoTransform()
-                    projection = raster_t_buf.GetProjection()
-                else:
-                    t_final += array_t_buf * weights[wd] / weight_sum
-                    dt_final += array_dt_buf * weights[wd] / weight_sum
-                i += 1
+                #     x_count_t, y_count_t = raster_t_buf.RasterXSize, raster_t_buf.RasterYSize
+                #     x_count_dt, y_count_dt = raster_dt_buf.RasterXSize, raster_dt_buf.RasterYSize
+                #     geotransform = raster_t_buf.GetGeoTransform()
+                #     projection = raster_t_buf.GetProjection()
+                # else:
+                #     t_final += array_t_buf * weights[wd] / weight_sum
+                #     dt_final += array_dt_buf * weights[wd] / weight_sum
+                # i += 1
                 
-                # Release memory to avoid error due to gdal
-                raster_t_buf = None
-                raster_dt_buf = None
-                array_t_buf = None
-                array_dt_buf = None
-        
+                # # Release memory to avoid error due to gdal
+                # raster_t_buf = None
+                # raster_dt_buf = None
+                # array_t_buf = None
+                # array_dt_buf = None
+
         output_t_path[tp] = f'{final_output_dir + os.sep + OUTPUT_T}_{str(tp)}h'
         output_dt_path[tp] = f'{final_output_dir + os.sep + OUTPUT_DT}_{str(tp)}h'
         
-        # Save the final air temperature as a raster and as a contour
-        calc_fct.save_raster(array = t_final, 
-                             path = output_t_path[tp], 
-                             x_count = x_count_t,
-                             y_count = y_count_t,
-                             geotransform = geotransform,
-                             projection = projection)
+        # Average the deltaT and T using all directions
+        processing.run("qgis:rastercalculator", 
+                       {'EXPRESSION':average_formula_t,
+                        'LAYERS':raster_t_list,
+                        'CELLSIZE':0,'EXTENT':None,'CRS':None,'OUTPUT':output_t_path[tp]})
+        processing.run("qgis:rastercalculator", 
+                       {'EXPRESSION':average_formula_dt,
+                        'LAYERS':raster_dt_list,
+                        'CELLSIZE':0,'EXTENT':None,'CRS':None,'OUTPUT':output_dt_path[tp]})        
         
-        interval_isovalues_T = round_to((np.nanmax(t_final)-np.nanmin(t_final)) / NB_ISOVALUES,
+        # # Save the final air temperature as a raster and as a contour
+        # calc_fct.save_raster(array = t_final, 
+        #                      path = output_t_path[tp], 
+        #                      x_count = x_count_t+1,
+        #                      y_count = y_count_t+1,
+        #                      geotransform = geotransform,
+        #                      projection = projection)
+        
+        raster_t_final = gdal.Open(f'{output_t_path[tp]}')
+        array_t_final = raster_t_final.ReadAsArray()
+        array_t_final = array_t_final[array_t_final>-9999]
+        interval_isovalues_T = round_to((np.nanmax(array_t_final)-np.nanmin(array_t_final)) / NB_ISOVALUES,
                                                  2)
+        
+        # Release memory to avoid error due to gdal
+        raster_t_final = None
+        array_t_final = None
+                
         processing.run("gdal:contour_polygon", 
                        {'INPUT':output_t_path[tp],
                         'BAND':1,
@@ -511,16 +545,24 @@ def calcParkInfluence(weatherFilePath,
                         'FIELD_NAME_MAX':'ELEV_MAX',
                         'OUTPUT': output_t_path[tp] + ".geojson"})
         
-        # Save the final delta air temperature as a raster and as a contour
-        calc_fct.save_raster(array = dt_final, 
-                             path = output_dt_path[tp], 
-                             x_count = x_count_dt,
-                             y_count = y_count_dt,
-                             geotransform = geotransform,
-                             projection = projection)
-       
-        interval_isovalues_dT = round_to((np.nanmax(dt_final)-np.nanmin(dt_final)) / NB_ISOVALUES,
+        # # Save the final delta air temperature as a raster and as a contour
+        # calc_fct.save_raster(array = dt_final, 
+        #                      path = output_dt_path[tp], 
+        #                      x_count = x_count_dt,
+        #                      y_count = y_count_dt,
+        #                      geotransform = geotransform,
+        #                      projection = projection)
+        
+        raster_dt_final = gdal.Open(f'{output_dt_path[tp]}')
+        array_dt_final = raster_dt_final.ReadAsArray()
+        array_dt_final = array_dt_final[array_dt_final>-9999]
+        interval_isovalues_dT = round_to((np.nanmax(array_dt_final)-np.nanmin(array_dt_final)) / NB_ISOVALUES,
                                                  2)
+        
+        # Release memory to avoid error due to gdal
+        raster_dt_final = None
+        array_dt_final = None
+        
         processing.run("gdal:contour_polygon", 
                        {'INPUT':output_t_path[tp],
                         'BAND':1,

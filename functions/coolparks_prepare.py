@@ -7,7 +7,7 @@ from . import loadData
 import string
 
 def creates_units_of_analysis(cursor, park_boundary_tab, srid,
-                                nCrossWind, nCrossWindOut, wind_dir):
+                                nCrossWindTot, wind_dir):
     """ Creates many units used for analysis:
             - the along-wind corridors used to average park characteristics
     and city morphology and organisation
@@ -23,39 +23,41 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
                 Table name where park boundaries are saved
             srid: int
                 EPSG code that will be assigned to corridors geometries
-            nCrossWind: int
+            nCrossWindTot: int
                 Number of cross-wind cells within the park
-            nCrossWindOut: int
-                Number of cross-wind cells outside the park (left + right)
             wind_dir: float
                 wind direction (clock-wise, ° from North)
         
 		Returns
 		_ _ _ _ _ _ _ _ _ _ 
 
-            rec_coord_park: String
+            rec_coord_park_upstream: String
                 Name of the table where are saved park corridors
-            rec_coord_city: String
+            rec_coord_city_upstream: String
                 Name of the table where are saved city corridors
             grid: String
                 Name of the table used for grid calculation
             crosswind_line: String
                 Name of the table where are saved crosswind lines"""    
     
+    # Calculates the number of corridors inside the park
+    nCrossWind = int(nCrossWindTot / 3)
+    
     # Temporary tables (and prefix for temporary tables)
     rec_ini = DataUtil.postfix("RECT_INI")
     line_ini = DataUtil.postfix("LINE_INI")
     rec_park = DataUtil.postfix("RECT_PARK")
     rec_city = DataUtil.postfix("RECT_CITY")
-    rec_city_upstream = DataUtil.postfix("RECT_CITY_UPSTREAM")
+    rec_city_coord = DataUtil.postfix("RECT_CITY_COORD")
+    rec_park_coord = DataUtil.postfix("RECT_PARK_COORD")
     grid_ini = DataUtil.postfix("GRID_INI")
     grid_ini2 = DataUtil.postfix("GRID_INI2")
     grid_ini3 = DataUtil.postfix("GRID_INI3")
     grid_ini4 = DataUtil.postfix("GRID_INI4")
     
     # Output table names
-    rec_coord_park = DataUtil.postfix("RECT_COORD_PARK", str(wind_dir).replace(".", "_"))
-    rec_coord_city = DataUtil.postfix("RECT_COORD_CITY", str(wind_dir).replace(".", "_"))
+    rec_coord_park_upstream = DataUtil.postfix("RECT_COORD_PARK_UPSTREAM", str(wind_dir).replace(".", "_"))
+    rec_coord_city_upstream = DataUtil.postfix("RECT_COORD_CITY_UPSTREAM", str(wind_dir).replace(".", "_"))
     grid = DataUtil.postfix("GRID", str(wind_dir).replace(".", "_"))
     crosswind_line = DataUtil.postfix("CROSSWIND_LINE", str(wind_dir).replace(".", "_"))
     
@@ -75,7 +77,10 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
     if dx < MIN_CELL_SIZE:
         nCrossWind = int(park_bb_xsize / MIN_CELL_SIZE)
         dx = park_bb_xsize / nCrosswind
-        
+    
+    # The total number of corridors outside the park
+    nCrossWindOut = nCrossWind * 2
+    
     # Creates rectangles and lines along 
     list_rect = ["""('POLYGON(({0} {1}, {0} {2}, {3} {2}, {3} {1}, {0} {1}))',
                     {4})
@@ -123,6 +128,9 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
                     park_boundary_tab))
     Lpark = cursor.fetchall()[0][0]
     
+    # Round this transect length to the upper multiple of corridor width
+    Lpark = np.ceil(Lpark / dx) * dx
+    
     # Calculation of the intersection between rectangles and park and rectangles and city
     cursor.execute(
         """
@@ -150,54 +158,48 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
                     park_boundary_tab                   , Lpark,
                     ID_UPSTREAM))
                   
-    # For city rectangles, start ID_UPSTREAM from 1 in the North
+    # Identification of coordinates of beginning and end of city rectangles
     cursor.execute(
         f""" 
-        DROP TABLE IF EXISTS {rec_city_upstream};
-        CREATE TABLE {rec_city_upstream}
+        {DataUtil.createIndex(tableName=line_ini, 
+                              fieldName="ID",
+                              isSpatial=False)};
+        {DataUtil.createIndex(tableName=rec_city, 
+                              fieldName="ID",
+                              isSpatial=False)};
+        DROP TABLE IF EXISTS {rec_city_coord};
+        CREATE TABLE {rec_city_coord}
             AS SELECT   a.ID, 
-                        a.{GEOM_FIELD},
-                        MAX(b.ID_UPSTREAM)+1-a.{ID_UPSTREAM} AS {ID_UPSTREAM}
-            FROM {rec_city} AS a LEFT JOIN {rec_city} AS b
+                        b.{GEOM_FIELD},
+                        b.{ID_UPSTREAM},
+                        ST_YMIN(ST_INTERSECTION(a.{GEOM_FIELD}, ST_EXTERIORRING(b.{GEOM_FIELD}))) AS YMIN,
+                        ST_YMAX(ST_INTERSECTION(a.{GEOM_FIELD}, ST_EXTERIORRING(b.{GEOM_FIELD}))) AS YMAX
+            FROM {line_ini} AS a RIGHT JOIN {rec_city} AS b
             ON a.ID = b.ID
-            GROUP BY b.ID, a.{GEOM_FIELD}
+            WHERE ST_INTERSECTS(a.{GEOM_FIELD}, b.{GEOM_FIELD})
         """)
-
-    # Identification of coordinates of beginning and end of park and city rectangles
+        
+    # Identification of coordinates of beginning and end of parks
     cursor.execute(
-        """
-        {6};{7};{8};
-        DROP TABLE IF EXISTS {0}, {1};
-        CREATE TABLE {0}
-            AS SELECT   b.ID,
-                        b.{9},
-                        b.{2},
-                        ST_YMIN(ST_INTERSECTION(a.{2}, ST_EXTERIORRING(b.{2}))) AS YMIN,
-                        ST_YMAX(ST_INTERSECTION(a.{2}, ST_EXTERIORRING(b.{2}))) AS YMAX,
-                        ST_AREA(b.{2}) AS CORRIDOR_AREA
-            FROM {3} AS a RIGHT JOIN {4} AS b ON a.ID = b.ID
-            WHERE ST_INTERSECTS(a.{2}, b.{2});
-        CREATE TABLE {1}
-            AS SELECT   b.ID,
-                        b.{9},
-                        b.{2},
-                        ST_YMIN(ST_INTERSECTION(a.{2}, ST_EXTERIORRING(b.{2}))) AS YMIN,
-                        ST_YMAX(ST_INTERSECTION(a.{2}, ST_EXTERIORRING(b.{2}))) AS YMAX
-            FROM {3} AS a RIGHT JOIN {5} AS b ON a.ID = b.ID
-            WHERE ST_INTERSECTS(a.{2}, b.{2});
-        """.format(rec_coord_park                   , rec_coord_city,
-                   GEOM_FIELD                       , line_ini,
-                   rec_park                         , rec_city_upstream,
-                   DataUtil.createIndex(tableName=line_ini, 
-                                        fieldName="ID",
-                                        isSpatial=False),
-                   DataUtil.createIndex(tableName=rec_park, 
-                                        fieldName="ID",
-                                        isSpatial=False),
-                   DataUtil.createIndex(tableName=rec_city_upstream, 
-                                        fieldName="ID",
-                                        isSpatial=False),
-                   ID_UPSTREAM))
+        f""" 
+        {DataUtil.createIndex(tableName=line_ini, 
+                              fieldName="ID",
+                              isSpatial=False)};
+        {DataUtil.createIndex(tableName=rec_park, 
+                              fieldName="ID",
+                              isSpatial=False)};
+        DROP TABLE IF EXISTS {rec_park_coord};
+        CREATE TABLE {rec_park_coord}
+            AS SELECT   a.ID, 
+                        b.{GEOM_FIELD},
+                        b.{ID_UPSTREAM},
+                        ST_YMIN(ST_INTERSECTION(a.{GEOM_FIELD}, ST_EXTERIORRING(b.{GEOM_FIELD}))) AS YMIN,
+                        ST_YMAX(ST_INTERSECTION(a.{GEOM_FIELD}, ST_EXTERIORRING(b.{GEOM_FIELD}))) AS YMAX,
+                        ST_AREA(b.{GEOM_FIELD}) AS CORRIDOR_AREA
+            FROM {line_ini} AS a RIGHT JOIN {rec_park} AS b
+            ON a.ID = b.ID
+            WHERE ST_INTERSECTS(a.{GEOM_FIELD}, b.{GEOM_FIELD})
+        """)
 
     # Creates the grid used for the calculations
     cursor.execute(
@@ -206,16 +208,85 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
         CREATE TABLE {grid_ini}
             AS SELECT   ID, {N_ALONG_WIND_PARK}+1-ID_ROW AS ID_ROW, ID_COL,
                         {GEOM_FIELD}
-            FROM ST_MakeGridPoints((SELECT ST_ENVELOPE(ST_ACCUM({GEOM_FIELD})) AS {GEOM_FIELD} FROM {rec_coord_city}), 
-                                   (SELECT ({park_bb_xsize}+{dx}*({nCrossWindOut}-1))/(MAX(ID)-1) 
-                                            FROM {rec_coord_city}), 
+            FROM ST_MakeGridPoints((SELECT ST_ENVELOPE(ST_ACCUM({GEOM_FIELD})) AS {GEOM_FIELD} FROM {rec_city_coord}), 
+                                   {dx}, 
                                    (3*{park_bb_ysize})/({N_ALONG_WIND_PARK})) AS {GEOM_FIELD}
-            WHERE   ID_COL <= (SELECT MAX(ID) FROM {rec_coord_city})
+            WHERE   ID_COL <= (SELECT MAX(ID) FROM {rec_city_coord})
                     AND ID_ROW <= {N_ALONG_WIND_PARK};
         """)
+    
+
+    # The nb of columns might be different depending on park size in a given direction
+    # thus ID_COL may start above 1 (while need to start from 1)
+    cursor.execute(f"SELECT MIN(ID) FROM {rec_city_coord}")
+    MIN_ID_COL = cursor.fetchall()[0][0]
+    
+    # Keep only rectangles that intersects points
+    cursor.execute(
+        f"""
+        DROP TABLE IF EXISTS RECT_PARK_OK;
+        CREATE TABLE RECT_PARK_OK
+            AS SELECT   a.ID - {MIN_ID_COL} + 1 AS ID,
+                        a.{GEOM_FIELD},
+                        a.{ID_UPSTREAM},
+                        MAX(a.YMAX) AS YMAX,
+                        MAX(a.YMIN) AS YMIN,
+                        MAX(a.CORRIDOR_AREA) AS CORRIDOR_AREA
+            FROM {rec_park_coord} AS a LEFT JOIN {grid_ini} AS b
+            ON a.ID - {MIN_ID_COL} + 1 = b.ID_COL
+            WHERE ST_INTERSECTS(a.{GEOM_FIELD}, b.{GEOM_FIELD})
+            GROUP BY a.ID, a.{ID_UPSTREAM};
+        DROP TABLE IF EXISTS RECT_CITY_OK;
+        CREATE TABLE RECT_CITY_OK
+            AS SELECT   a.ID - {MIN_ID_COL} + 1 AS ID,
+                        a.{GEOM_FIELD},
+                        a.{ID_UPSTREAM},
+                        MAX(a.YMAX) AS YMAX,
+                        MAX(a.YMIN) AS YMIN
+            FROM {rec_city_coord} AS a LEFT JOIN {grid_ini} AS b
+            ON a.ID - {MIN_ID_COL} + 1 = b.ID_COL
+            WHERE ST_INTERSECTS(a.{GEOM_FIELD}, b.{GEOM_FIELD})
+            GROUP BY a.ID, a.{ID_UPSTREAM};        
+        """)
+
+    # For city and park rectangles, start ID_UPSTREAM from 1 in the North
+    cursor.execute(
+        """
+        {6};{7};{8};
+        DROP TABLE IF EXISTS {0}, {1};
+        CREATE TABLE {0}
+            AS SELECT   b.ID,
+                        MAX(b.{9})+1-a.{9}-MIN(b.{9})+1 AS {9},
+                        a.{2},
+                        a.YMIN,
+                        a.YMAX,
+                        a.CORRIDOR_AREA
+            FROM {4} AS a RIGHT JOIN {4} AS b ON a.ID = b.ID
+            GROUP BY b.ID, a.YMIN;
+        CREATE TABLE {1}
+            AS SELECT   b.ID,
+                        MAX(b.{9})+1-a.{9}-MIN(b.{9})+1 AS {9},
+                        a.{2},
+                        a.YMIN,
+                        a.YMAX
+            FROM {5} AS a RIGHT JOIN {5} AS b ON a.ID = b.ID
+            GROUP BY b.ID, a.YMIN;
+        """.format(rec_coord_park_upstream          , rec_coord_city_upstream,
+                   GEOM_FIELD                       , line_ini,
+                   "RECT_PARK_OK"                   , "RECT_CITY_OK",
+                   DataUtil.createIndex(tableName=line_ini, 
+                                        fieldName="ID",
+                                        isSpatial=False),
+                   DataUtil.createIndex(tableName="RECT_PARK_OK", 
+                                        fieldName="ID",
+                                        isSpatial=False),
+                   DataUtil.createIndex(tableName="RECT_CITY_OK", 
+                                        fieldName="ID",
+                                        isSpatial=False),
+                   ID_UPSTREAM))
         
     # Calculates the distance from each grid cell to the input and output of the park
-    cursor.execute("{0};{1}".format(DataUtil.createIndex(tableName=rec_coord_park, 
+    cursor.execute("{0};{1}".format(DataUtil.createIndex(tableName=rec_coord_park_upstream, 
                                                          fieldName="ID",
                                                          isSpatial=False),
                                     DataUtil.createIndex(tableName=grid_ini, 
@@ -230,14 +301,14 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
                         ST_Y(a.{GEOM_FIELD})-b.YMIN AS {D_PARK_OUTPUT},
                         b.YMAX-ST_Y(a.{GEOM_FIELD}) AS {D_PARK_INPUT},
                         b.CORRIDOR_AREA
-            FROM {grid_ini} AS a LEFT JOIN {rec_coord_park} AS b
+            FROM {grid_ini} AS a LEFT JOIN {rec_coord_park_upstream} AS b
             ON a.ID_COL = b.ID
             WHERE   ST_Y(a.{GEOM_FIELD}) > b.YMIN AND
                     ST_Y(a.{GEOM_FIELD}) <= b.YMAX;
         """)
         
     # Calculates the distance from each grid cell from the output of the park
-    cursor.execute("{0};{1}".format(DataUtil.createIndex(tableName=rec_coord_city, 
+    cursor.execute("{0};{1}".format(DataUtil.createIndex(tableName=rec_coord_city_upstream, 
                                                          fieldName="ID",
                                                          isSpatial=False),
                                     DataUtil.createIndex(tableName=grid_ini, 
@@ -250,7 +321,7 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
             AS SELECT   a.ID,
                         b.{ID_UPSTREAM},
                         b.YMAX-ST_Y(a.{GEOM_FIELD}) AS {D_PARK}
-            FROM {grid_ini} AS a LEFT JOIN {rec_coord_city} AS b
+            FROM {grid_ini} AS a LEFT JOIN {rec_coord_city_upstream} AS b
             ON a.ID_COL = b.ID
             WHERE   ST_Y(a.{GEOM_FIELD}) > b.YMIN AND
                     ST_Y(a.{GEOM_FIELD}) <= b.YMAX
@@ -326,9 +397,10 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
             DROP TABLE IF EXISTS {0}, {1}, {2}, {3}, {4}
             """.format( rec_ini                 , line_ini,
                         rec_park                , rec_city,
-                        rec_city_upstream))
+                        rec_city_coord          , "RECT_PARK_OK",
+                        "RECT_CITY_OK"          , rec_park_coord))
     
-    return rec_coord_park, rec_coord_city, grid, crosswind_line, dx
+    return rec_coord_park_upstream, rec_coord_city_upstream, grid, crosswind_line, dx
 
 def loadInputData(cursor, parkBoundaryFilePath, parkGroundFilePath, 
                   parkCanopyFilePath, buildingFilePath, srid):
@@ -485,14 +557,20 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
     # Filter only buildings which are at a given distance from park boundaries
     cursor.execute(
         f"""
+        SELECT SQRT(POWER(ST_XMAX({GEOM_FIELD})-ST_XMIN({GEOM_FIELD}),2)
+                    +POWER(ST_YMAX({GEOM_FIELD})-ST_YMIN({GEOM_FIELD}),2))
+        FROM {PARK_BOUNDARIES_TAB}
+        """)
+    distance_max = cursor.fetchall()[0][0]
+    cursor.execute(
+        f"""
         DROP TABLE IF EXISTS TEMPO_BUILDING_1;
         CREATE TABLE TEMPO_BUILDING_1
             AS SELECT a.*
             FROM {tempo_build} AS a, {PARK_BOUNDARIES_TAB} AS b
             WHERE ST_DWITHIN(a.{GEOM_FIELD}, 
                              b.{GEOM_FIELD},
-                             SQRT(POWER(ST_XMAX(b.{GEOM_FIELD})-ST_XMIN(b.{GEOM_FIELD}),2)
-                                  +POWER(ST_YMAX(b.{GEOM_FIELD})-ST_YMIN(b.{GEOM_FIELD}),2)))
+                             {distance_max})
         """)
     
     # Fill missing building age and renovation with missing values
@@ -504,10 +582,6 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
         sql_age = f"COALESCE({build_age}, {default_build_age})"
     else:
         sql_age = f"{default_build_age}"
-    if build_renovation and build_renovation != "":
-        sql_renovation = f"COALESCE({build_renovation}, {default_build_renov})"
-    else:
-        sql_renovation = f"{default_build_renov}"
     if build_wwr and build_wwr != "":
         sql_wwr = f"COALESCE({build_wwr}, {default_build_wwr})"
     else:
@@ -519,32 +593,53 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                                       {GEOM_FIELD} GEOMETRY,
                                       {HEIGHT_FIELD} DOUBLE,
                                       {BUILDING_AGE} INTEGER,
-                                      {BUILDING_RENOVATION} BOOLEAN,
                                       {BUILDING_WWR} DOUBLE)
             AS SELECT   NULL,
                         ST_MAKEVALID(ST_NORMALIZE({GEOM_FIELD})) AS {GEOM_FIELD},
                         {sql_height} AS {HEIGHT_FIELD},
                         {sql_age} AS {BUILDING_AGE},
-                        {sql_renovation} AS {BUILDING_RENOVATION},
                         {sql_wwr} AS {BUILDING_WWR}
             FROM TEMPO_BUILDING_1
         """)
-        
+    
+    # Set a building height class to each building
+    casewhen_sql = " ".join([f"""WHEN {HEIGHT_FIELD} >= {BUILDING_SIZE_CLASSES.loc[i, "low_limit"]}
+                                      AND {HEIGHT_FIELD} < {BUILDING_SIZE_CLASSES.loc[i+1, "low_limit"]}
+                                 THEN {i} """
+                             for i in BUILDING_SIZE_CLASSES.index[0:-1]])
+    casewhen_sql += f"""WHEN {HEIGHT_FIELD} >= {BUILDING_SIZE_CLASSES.loc[BUILDING_SIZE_CLASSES.index[-1], "low_limit"]}
+                        THEN {BUILDING_SIZE_CLASSES.index[-1]}"""
+    cursor.execute(
+        f"""
+        DROP TABLE IF EXISTS TEMPO_BUILDING_3;
+        CREATE TABLE TEMPO_BUILDING_3 
+            AS SELECT   {ID_FIELD_BUILD},
+                        {GEOM_FIELD},
+                        {HEIGHT_FIELD},
+                        {BUILDING_WWR},
+                        {BUILDING_AGE},
+                        CASE {casewhen_sql} END AS {BUILD_SIZE_CLASS}
+            FROM TEMPO_BUILDING_2
+        """)
+    
+    
     # Create and fill building age class and all building characteristics
     sql_properties = {}
-    properties = list(BUILDING_PROPERTIES.columns)
+    properties = list(BUILDING_PROPERTIES[list(BUILDING_PROPERTIES.keys())[0]].columns)
     properties.remove("Name")
     properties.remove("period_start")
     properties.remove("period_end")
+        
     for prop in properties:
-        sql_properties[prop] = f"""CAST(CASE  WHEN {BUILDING_RENOVATION} = 0
-                                         THEN CASE""" 
-        for period in BUILDING_PROPERTIES.index:
-            sql_properties[prop] += f""" WHEN {BUILDING_AGE} >= {BUILDING_PROPERTIES.loc[period, "period_start"]}
-                                              AND {BUILDING_AGE} < {BUILDING_PROPERTIES.loc[period, "period_end"]}
-                                         THEN {BUILDING_PROPERTIES.loc[period, prop]}"""
-        sql_properties[prop] += f""" END ELSE {BUILDING_PROPERTIES.loc[BUILDING_PROPERTIES.index[-1], prop]} 
-                                     END AS DOUBLE) AS {prop}"""
+        sql_properties[prop] = f"""CAST(CASE  """
+        for buildt in BUILDING_SIZE_CLASSES.index:
+            sql_properties[prop] += f"""WHEN {BUILD_SIZE_CLASS} = {buildt}
+                                        THEN CASE""" 
+            for period in BUILDING_PROPERTIES[buildt].index:
+                sql_properties[prop] += f""" WHEN {BUILDING_AGE} >= {BUILDING_PROPERTIES[buildt].loc[period, "period_start"]} AND {BUILDING_AGE} < {BUILDING_PROPERTIES[buildt].loc[period, "period_end"]}
+                                             THEN {BUILDING_PROPERTIES[buildt].loc[period, prop]}"""
+            sql_properties[prop] +=" END "
+        sql_properties[prop] += f""" END AS DOUBLE) AS {prop}"""
     cursor.execute(
         f"""
         DROP TABLE IF EXISTS {BUILDINGS_TAB};
@@ -553,13 +648,8 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                         {GEOM_FIELD},
                         {HEIGHT_FIELD},
                         {BUILDING_WWR},
-                        CASE WHEN   {BUILDING_AGE} > 1974 
-                                    OR {BUILDING_AGE} > 1974 AND {BUILDING_RENOVATION} = 1
-                             THEN 2
-                             ELSE 1
-                             END AS {BUILDING_CLASS},
                         {", ".join(sql_properties.values())}
-            FROM TEMPO_BUILDING_2
+            FROM TEMPO_BUILDING_3
         """)    
     
     # Delete temporary tables if not debug mode              
@@ -567,8 +657,10 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
         cursor.execute(
             """
             DROP TABLE IF EXISTS TEMPO_PARK_CANOPY_1, TEMPO_PARK_GROUND_1,
-            TEMPO_BUILDING_1, TEMPO_BUILDING_2;
+            TEMPO_BUILDING_1, TEMPO_BUILDING_2, TEMPO_BUILDING_3;
             """)
+            
+    return distance_max
     
 def testInputData(cursor):
     """ Test that the loaded input data are OK (after filling with missing values).
@@ -1267,7 +1359,7 @@ def calc_street_indic(cursor, blocks, rect_city, crosswind_lines, wind_dir):
                         MIN(a.{11}) AS ID_BLOCK2
             FROM {9} AS a, {10} AS b
             WHERE   a.{7} && b.{7} AND ST_INTERSECTS(a.{7}, b.{7})
-            GROUP BY a.{4}, a.{5}, b.{4}
+            GROUP BY a.{4}, a.{5}, b.{4}, b.{13}
         """.format( DataUtil.createIndex(tableName=streets_extremities, 
                                          fieldName=GEOM_FIELD,
                                          isSpatial=True),
@@ -1772,13 +1864,7 @@ def calc_build_indic(cursor, buildings, blocks, prefix):
                                                    indic = ASPECT_RATIO,
                                                    wind_dir = "")
     
-    # Gather aspect ratio with building id and set a buildingh height class
-    casewhen_sql = " ".join([f"""WHEN a.{HEIGHT_FIELD} >= {BUILDING_SIZE_CLASSES.loc[i, "low_limit"]}
-                                      AND a.{HEIGHT_FIELD} < {BUILDING_SIZE_CLASSES.loc[i+1, "low_limit"]}
-                                 THEN {i} """
-                             for i in BUILDING_SIZE_CLASSES.index[0:-1]])
-    casewhen_sql += f"""WHEN a.{HEIGHT_FIELD} >= {BUILDING_SIZE_CLASSES.loc[BUILDING_SIZE_CLASSES.index[-1], "low_limit"]}
-                        THEN {BUILDING_SIZE_CLASSES.index[-1]}"""
+    # Gather aspect ratio with building id
     cursor.execute(
         """ 
         {0};{1};   
@@ -1793,7 +1879,6 @@ def calc_build_indic(cursor, buildings, blocks, prefix):
         DROP TABLE IF EXISTS {aspect_and_height};
         CREATE TABLE {aspect_and_height}
             AS SELECT a.*,
-                      CASE {casewhen_sql} END AS {BUILD_SIZE_CLASS},
                       b.{ASPECT_RATIO}
             FROM {buildings} AS a LEFT JOIN {block_aspect_ratio} AS b
             ON a.{ID_FIELD_BLOCK} = b.ID

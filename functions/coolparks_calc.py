@@ -80,7 +80,7 @@ def air_cooling_and_diffusion(grid_sum_tair, grid_sum_deltatair, grid_ind_city_b
     # Need to iterate to fill cells either since a corridor may have separated 
     # (by streets) patches of park
     for i in grid_ind_park["ID_UPSTREAM"].unique():
-        ######## EFFECT OF THE PARKC COMPOSITION ON THE TEMPERATURE IN THE PARK #######
+        ######## EFFECT OF THE PARK COMPOSITION ON THE TEMPERATURE IN THE PARK #######
         # Get the cells for the i st "row" of park
         grid_ind_park_upstream = grid_ind_park[grid_ind_park["ID_UPSTREAM"] == i]
         
@@ -132,15 +132,15 @@ def air_cooling_and_diffusion(grid_sum_tair, grid_sum_deltatair, grid_ind_city_b
     return grid_sum_tair, grid_sum_deltatair
     
 def identify_point_position(grid_indic):
-    """ For each wind direction, identify the index corresponding to the city
-    before the park, to the index corresponding to the park and to the city
-    after the park
+    """ For each wind direction, identify the index corresponding to the city before the park,
+       to the index corresponding to the park and to the city after the park
 
 		Parameters
 		_ _ _ _ _ _ _ _ _ _ 
   
-            grid_indic: pd.DataFrame
-                Grid containing park and city indicators for a given wind direction
+            grid_indic: dictionary of pd.DataFrame
+                Dictionary containing for each wind direction the grid containing 
+                park and city indicators
         
 		Returns
 		_ _ _ _ _ _ _ _ _ _ 
@@ -159,7 +159,42 @@ def identify_point_position(grid_indic):
                                      how = "all",
                                      subset = [D_PARK])
              for d in grid_indic.keys()}
+            
     
+def remove_null_upstream(grid_indic, start):
+    """ Some of the upstream city zones did not intersect grid points, thus
+    there are missing index (for example ID_UPSTREAM = 1 and then 3 for a column
+    but no 2). Thus this function work reindexes the ID_UPSTREAM in a continuous way.
+    
+		Parameters
+		_ _ _ _ _ _ _ _ _ _ 
+  
+            grid_indic: dictionary of pd.DataFrame
+                Dictionary containing for each wind direction the grid containing 
+                park and city indicators
+            start: int
+                Minimum possible ID_UPSTREAM value of the grid
+        
+		Returns
+		_ _ _ _ _ _ _ _ _ _ 
+
+            Dictionnary with for each wind direction, the grid with a continuous ID_UPSTREAM index"""
+   
+    for d in grid_indic:
+        # First set to 1 cells having ID_UPSTREAM = 0
+        grid_indic[d].loc[grid_indic[d][grid_indic[d]["ID_UPSTREAM"] == 0].index,\
+                          "ID_UPSTREAM"] = 1
+        for col in grid_indic[d]["ID_COL"].unique():
+            grid_ind_col = grid_indic[d][grid_indic[d]["ID_COL"] == col]
+            id_valid = start - 1
+            for id_up in np.arange(1, grid_ind_col["ID_UPSTREAM"].max() + 1):
+                if not grid_ind_col[grid_ind_col["ID_UPSTREAM"] == id_up].empty:
+                    if id_up > id_valid + 1:
+                        grid_indic[d].loc[grid_ind_col[grid_ind_col["ID_UPSTREAM"] == id_up].index,\
+                                          "ID_UPSTREAM"] = id_valid + 1
+                    id_valid += 1
+            
+    return grid_indic
     
 def calc_morpho_t_effect(df_indic, ws_norm, day_hour):
     """ Calculates the effect of the morphology on the air temperature observed in 
@@ -297,8 +332,8 @@ def calc_park_effect(df_indic, tair, ws_norm, dpv_norm, day_hour):
 
 def limit_geoindic(df_indic):
     for ind in df_indic.columns[df_indic.columns.isin(TRANSPORT_MAX_VAL.index)]:
-        df_indic[ind][df_indic[ind] > TRANSPORT_MAX_VAL.loc[ind]] = TRANSPORT_MAX_VAL.loc[ind]
-        df_indic[ind][df_indic[ind] < TRANSPORT_MIN_VAL.loc[ind]] = TRANSPORT_MIN_VAL.loc[ind]
+        df_indic.loc[df_indic[df_indic[ind] > TRANSPORT_MAX_VAL.loc[ind]].index, ind] = TRANSPORT_MAX_VAL.loc[ind]
+        df_indic.loc[df_indic[df_indic[ind] < TRANSPORT_MIN_VAL.loc[ind]].index, ind] = TRANSPORT_MIN_VAL.loc[ind]
     
     return df_indic
 

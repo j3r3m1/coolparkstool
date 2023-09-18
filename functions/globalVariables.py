@@ -54,20 +54,17 @@ GEOMETRY_SNAP_TOLERANCE = 0.05
 # Ground park data should almost filled the park within its boundaries
 GROUND_TO_PARK_RATIO = 0.95
 
-# Number of cross wind cells within the park
-N_CROSS_WIND_PARK = 6
-
-# Number of cells outside the park (left + right)
-N_CROSS_WIND_OUTSIDE = 12
-
+# WARNING: IDEALLY, TRY TO HAVE THE TWO FOLLOWING VARIABLES AS MULTIPLES OF 3
+# Number of cross wind cells in a space including the park and also the city in its surrounding
+N_CROSS_WIND_PARK = 30 # equivalent to 10 cells to the left of the park, 10 within and 10 on the right
 # Number of along wind cells in a space including the park and also the city
-N_ALONG_WIND_PARK = 15  # equivalent to 10 cells before the park, 10 within and 10 after
+N_ALONG_WIND_PARK = 30  # equivalent to 10 cells before the park, 10 within and 10 after
 
 # min cell size (m)
 MIN_CELL_SIZE = 20
 
 # Number of cells in the output raster
-NB_OUTPUT_CELL = 10 * (N_CROSS_WIND_OUTSIDE + N_CROSS_WIND_PARK) * N_ALONG_WIND_PARK
+NB_OUTPUT_CELL = 16 * (N_CROSS_WIND_PARK) * N_ALONG_WIND_PARK
 
 # Cross wind lines distance
 CROSSWIND_LINE_DIST = 8
@@ -122,13 +119,14 @@ BUILDING_RENOVATION = "BUILDING_RENOVATION"
 BUILDING_CLASS = "BUILDING_CLASS"
 BUILDING_WWR = "BUILDING_WWR"
 BUILDING_AMPLIF_FACTOR = "AMPLIF_FACTOR"
-BUILDING_RROOF = "RROOF"
-BUILDING_RWALL = "RWALL"
+BUILDING_UROOF = "UROOF"
+BUILDING_UWALL = "UWALL"
 BUILDING_UWIN = "UWIN"
-BUILDING_RSLAB = "RSLAB"
+BUILDING_USLAB = "USLAB"
 BUILDING_INFILTRATION_RATE = "INFILTRATION_RATE"
 BUILDING_NATURAL_VENT_RATE = "NATURAL_VENT_RATE"
 BUILDING_MECHANICAL_VENT_RATE = "MECHANICAL_VENT_RATE"
+BUILDING_SHUTTER = "Shutter"
 
 DELTA_T = "DELTA_T"
 ENERGY_IMPACT_ABS = "ENERGY_IMPACT_ABS"
@@ -195,30 +193,102 @@ BUILDING_DEFAULT_RENOVATION = False
 BUILDING_DEFAULT_HEIGHT = 9
 BUILDING_DEFAULT_WINDOWS_WALL_RATIO = 0.2
 
-# Building properties per building age
-BUILDING_PROPERTIES = pd.DataFrame({"Name": ["Construit avant 1974 et non rénové thermiquement",
-                                             "Construit après 1974 ou rénové thermiquement"],
-                                    "period_start" : [0, 1974],
-                                    "period_end" : [1974, 2300],
-                                    "Rroof" : [1.04, 1.48],
-                                    "Rwall": [0.58, 1.20],
-                                    "Uwin" : [3.1, 1.7],
-                                    "Rslab" : [0.24, 0.37],
-                                    "Infiltration_rate" : [0.75, 0.53],
-                                    "Natural_vent_rate" : [1.3, 1.3],
-                                    "Mechanical_vent_rate" : [0.3, 0.3]},
-                                    index = [1, 2])
+# Building properties per building age and building size class (cf. index of BUILDING_SIZE_CLASS)
+BUILDING_PROPERTIES = {1: pd.DataFrame({"Name": ["Construit avant 1915",
+                                                 "Construit entre 1915 et 1948",
+                                                 "Construit entre 1948 et 1968",
+                                                 "Construit entre 1968 et 1982",
+                                                 "Construit entre 1982 et 1990",
+                                                 "Construit entre 1990 et 2001",
+                                                 "Construit entre 2001 et 2006",
+                                                 "Construit entre 2006 et 2012",
+                                                 "Construit après 2012"],
+                                        "period_start" : [0, 1915, 1948, 1968, 1982,
+                                                          1990, 2001, 2006, 2012],
+                                        "period_end" : [1915, 1948, 1968, 1982, 1990,
+                                                        2001, 2006, 2012, 2300],
+                                        BUILDING_UROOF : [1915, 1948, 1968, 1982, 1990,
+                                                          2001, 2006, 2012, 2300],
+                                        BUILDING_UWALL: [1915, 1948, 1968, 1982, 1990,
+                                                         2001, 2006, 2012, 2300],
+                                        BUILDING_UWIN : [1915, 1948, 1968, 1982, 1990,
+                                                         2001, 2006, 2012, 2300],
+                                        BUILDING_USLAB : [1915, 1948, 1968, 1982, 1990,
+                                                          2001, 2006, 2012, 2300],
+                                        BUILDING_INFILTRATION_RATE : [1915, 1948, 1968, 1982, 1990,
+                                                                      2001, 2006, 2012, 2300],
+                                        BUILDING_NATURAL_VENT_RATE : [1915, 1948, 1968, 1982, 1990,
+                                                                      2001, 2006, 2012, 2300],
+                                        BUILDING_MECHANICAL_VENT_RATE : [1915, 1948, 1968, 1982, 1990,
+                                                                         2001, 2006, 2012, 2300]},
+                                        index = np.arange(1,10)),
+                       2: pd.DataFrame({"Name": ["Construit avant 1915",
+                                                 "Construit entre 1915 et 1948",
+                                                 "Construit entre 1948 et 1968",
+                                                 "Construit entre 1968 et 1982",
+                                                 "Construit entre 1982 et 1990",
+                                                 "Construit entre 1990 et 2001",
+                                                 "Construit entre 2001 et 2006",
+                                                 "Construit entre 2006 et 2012",
+                                                 "Construit après 2012"],
+                                        "period_start" : [0, 1915, 1948, 1968, 1982,
+                                                          1990, 2001, 2006, 2012],
+                                        "period_end" : [1915, 1948, 1968, 1982, 1990,
+                                                        2001, 2006, 2012, 2300],
+                                        BUILDING_UROOF : [1915, 1948, 1968, 1982, 1990,
+                                                          2001, 2006, 2012, 2300],
+                                        BUILDING_UWALL: [1915, 1948, 1968, 1982, 1990,
+                                                         2001, 2006, 2012, 2300],
+                                        BUILDING_UWIN : [1915, 1948, 1968, 1982, 1990,
+                                                         2001, 2006, 2012, 2300],
+                                        BUILDING_USLAB : [1915, 1948, 1968, 1982, 1990,
+                                                          2001, 2006, 2012, 2300],
+                                        BUILDING_INFILTRATION_RATE : [1915, 1948, 1968, 1982, 1990,
+                                                                      2001, 2006, 2012, 2300],
+                                        BUILDING_NATURAL_VENT_RATE : [1915, 1948, 1968, 1982, 1990,
+                                                                      2001, 2006, 2012, 2300],
+                                        BUILDING_MECHANICAL_VENT_RATE : [1915, 1948, 1968, 1982, 1990,
+                                                                         2001, 2006, 2012, 2300]},
+                                        index = np.arange(1,10)),
+                       3: pd.DataFrame({"Name": ["Construit avant 1915",
+                                                 "Construit entre 1915 et 1948",
+                                                 "Construit entre 1948 et 1968",
+                                                 "Construit entre 1968 et 1982",
+                                                 "Construit entre 1982 et 1990",
+                                                 "Construit entre 1990 et 2001",
+                                                 "Construit entre 2001 et 2006",
+                                                 "Construit entre 2006 et 2012",
+                                                 "Construit après 2012"],
+                                        "period_start" : [0, 1915, 1948, 1968, 1982,
+                                                          1990, 2001, 2006, 2012],
+                                        "period_end" : [1915, 1948, 1968, 1982, 1990,
+                                                        2001, 2006, 2012, 2300],
+                                        BUILDING_UROOF : [1915, 1948, 1968, 1982, 1990,
+                                                          2001, 2006, 2012, 2300],
+                                        BUILDING_UWALL: [1915, 1948, 1968, 1982, 1990,
+                                                         2001, 2006, 2012, 2300],
+                                        BUILDING_UWIN : [1915, 1948, 1968, 1982, 1990,
+                                                         2001, 2006, 2012, 2300],
+                                        BUILDING_USLAB : [1915, 1948, 1968, 1982, 1990,
+                                                          2001, 2006, 2012, 2300],
+                                        BUILDING_INFILTRATION_RATE : [1915, 1948, 1968, 1982, 1990,
+                                                                      2001, 2006, 2012, 2300],
+                                        BUILDING_NATURAL_VENT_RATE : [1915, 1948, 1968, 1982, 1990,
+                                                                      2001, 2006, 2012, 2300],
+                                        BUILDING_MECHANICAL_VENT_RATE : [1915, 1948, 1968, 1982, 1990,
+                                                                         2001, 2006, 2012, 2300]},
+                                        index = np.arange(1,10))}
 
 # Regression coefficient and variables correspondance
 coef_var_correspondance = \
-    pd.Series([ASPECT_RATIO,
-               BUILDING_WWR,
+    pd.Series([BUILDING_WWR,
+               ASPECT_RATIO,
                BUILDING_AMPLIF_FACTOR,
-               HEIGHT_FIELD,
-               BUILDING_RROOF, 
-               BUILDING_RWALL, 
-               BUILDING_UWIN, 
-               BUILDING_RSLAB, 
+               BUILDING_SHUTTER,
+               BUILDING_UROOF, 
+               BUILDING_UWALL, 
+               BUILDING_USLAB,
+               BUILDING_UWIN,
                BUILDING_INFILTRATION_RATE, 
                BUILDING_NATURAL_VENT_RATE,
                BUILDING_MECHANICAL_VENT_RATE], 
@@ -230,7 +300,7 @@ BASIC_COOLING = -0.11
 
 # Dates used for calculation
 START_DATE = "01/06"
-END_DATE = "01/09"
+END_DATE = "20/06"
 
 # Generic names for meteorological variables
 WDIR = "wdir"
