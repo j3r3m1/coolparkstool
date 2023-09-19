@@ -37,7 +37,7 @@ Pour l’utiliser :
     - l’installer si nécessaire : si aucune version de la librairie recherchée n’est installée, il faut cliquer une seule fois sur la ligne correspondant à la librairie à installer. Si une version est affichée, cela signifie que la librairie est déjà installer, aucune action n’est nécessaire. Réitérer ces deux derniers points pour chaque librairie à installer.
 - Enfin, X autres librairies sont à installer en-dehors de l’installateur d’osgeo4W. Elles doivent cependant être installées dans le même environnement. Pour cela, il faut cette fois ci lancer le “shell osgeo4W”. Une fois lancé, il faut installer les librairies via pip :
     - pip install unidecode
-    - pip install ?
+    - pip install jaydebeapi
 
 #### Installation via anaconda
 Anaconda permet de gérer l’installation de librairies Python via la création d’environnements dédiés à un besoin donné. Il permet également de s’assurer de l’intercompatibilité des librairies entre elles dans un environnement donné. 
