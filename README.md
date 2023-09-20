@@ -51,7 +51,7 @@ Pour l’utiliser :
         - créer un nouvel environnement : conda create --name coolparks
         - activer cet environnement : conda activate coolparks
         - ajouter une nouvelle source de librairies d’où anaconda pourra télécharger des librairies : conda config --add channels conda-forge
-        - installer les librairies (cela peut prendre un temps considérable de gérer les dépendances) : conda install gdal qgis shapely geopandas unidecode statsmodels
+        - installer les librairies (cela peut prendre un temps considérable de gérer les dépendances) : conda install gdal qgis shapely geopandas unidecode statsmodels jaydebeapi
         - lancer QGIS via le terminal en tapant : qgis
     - si vous avez installé anaconda en mode “graphique” :
 
