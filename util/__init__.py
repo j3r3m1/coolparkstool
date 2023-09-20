@@ -6,7 +6,6 @@ from .coolparkstool_installer import setup_coolparkstool_python
 from qgis.core import Qgis, QgsMessageLog
 # we can specify a version if needed
 try: 
-    import numba
     import jaydebeapi
 except:
     if QMessageBox.question(None, "CoolParksTool Python dependencies not installed",

@@ -105,7 +105,6 @@ def setup_coolparkstool_python(ver=None, debug=False):
 
     try:
         # check if supy and others have been installed
-        import numba
         import jaydebeapi
 
     except Exception:

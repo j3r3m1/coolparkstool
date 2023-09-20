@@ -222,14 +222,6 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
             import jaydebeapi
         except:
             raise QgsProcessingException("'jaydebeapi' Python package is missing.")
-        try:
-            import numba
-        except Exception:
-            raise QgsProcessingException("'numba' Python package is missing.")
-        try:
-            import xarray
-        except Exception:
-            raise QgsProcessingException("'xarray' Python package is missing.")
 
         # Get the plugin directory to save some useful files
         plugin_directory = self.plugin_dir = os.path.dirname(__file__)
