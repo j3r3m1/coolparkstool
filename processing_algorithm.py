@@ -91,7 +91,7 @@ class CoolParksProcessorAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFile(
                 self.SCENARIO_DIRECTORY,
-                self.tr('Directory of the scenario of interest (should contain two folders called "preprocessor_outputs" and "processor_outputs"'),
+                self.tr('Directory of the scenario of interest (should contain two folders called "preprocessor_outputs" and "processor_outputs)"'),
                 behavior=QgsProcessingParameterFile.Folder))
         self.addParameter(
             QgsProcessingParameterFile(

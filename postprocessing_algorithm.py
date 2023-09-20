@@ -146,7 +146,14 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
                                      {'INPUT':extent_ref,'LAYERS':[extent_alt],
                                       'OUTPUT':tempo_overlap,
                                       'GRID_SIZE':None})["OUTPUT"]
-            if gpd.read_file(tempo_overlap).loc[0, "Extent_pc"] < 50:
+            # It seems the column where is saved the result has not the same name
+            # depending on the QGIS version...
+            df_overlap = gpd.read_file(overlap)
+            if df_overlap.columns.isin(["Extent_pc"]).sum() == 1:
+                col_name = "Extent_pc"
+            else:
+                col_name = df_overlap.columns[-2]
+            if gpd.read_file(overlap).loc[0, col_name] < 50:
                 raise QgsProcessingException(f'Reference and alternative scenario are not located in the same area')
         
         # Test that the parks have exactly the same shape (only composition should differ !!)
