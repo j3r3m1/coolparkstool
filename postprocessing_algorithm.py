@@ -53,11 +53,9 @@ from qgis.core import (QgsProcessing,
 from qgis.PyQt.QtWidgets import QMessageBox
 
 from pathlib import Path
-import pandas as pd
 import geopandas as gpd
 from qgis.PyQt.QtGui import QIcon
 import inspect
-import unidecode
 import processing
 
 from .functions.coolparks_postprocess import loadCoolParksRaster, loadCoolParksVector
@@ -372,11 +370,11 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
         return QCoreApplication.translate('Processing', string)
     
     def shortHelpString(self):
-        return self.tr("""The CoolParksTool '3. Compare two scenario' module is used 
-                       to compare two scenarios when:\n
-                           - only the park composition differs,
-                           - only the urban morphology differs,
-                           - only the weather conditions differ."""
+        return self.tr('The CoolParksTool "3. Compare two scenario" module is used '+
+                       'to compare two scenarios when:\n'+
+                       '    - only the park composition differs,'+
+                       '    - only the urban morphology differs,'+
+                       '    - only the weather conditions differ.'
         '\n'
         '\n'
         """You need to first use the '2. Calculate park effect' for the two scenarios you 

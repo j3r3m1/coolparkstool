@@ -470,9 +470,9 @@ def loadInputData(cursor, parkBoundaryFilePath, parkGroundFilePath,
     
     
 def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
-                    build_height, build_age, build_renovation, build_wwr,
-                    default_build_height, default_build_age,
-                    default_build_renov, default_build_wwr):
+                    build_height, build_age, build_wwr,
+                    default_build_height, default_build_age, 
+                    default_build_wwr):
     """ Modify or fill input data (buildings as well as park ground and canopy layers)
     to have all needed data for the next steps.
 
@@ -491,16 +491,12 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                 Name of the building height field
             build_age: String
                 Name of the building age field
-            build_renovation: String
-                Name of the building renovation field
             build_wwr: String
                 Name of the building windows-to-wall ratio field
             default_build_height: int
                 Default building height value
             default_build_age: int
                 Default building age (construction year)
-            default_build_renov: boolean
-                Whether or not by default a building is considered as renovated
             default_build_wwr: float
                 Default building windows-to-wall ratio
             
@@ -573,7 +569,7 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                              {distance_max})
         """)
     
-    # Fill missing building age and renovation with missing values
+    # Fill missing building age with missing values
     if build_height and build_height != "":
         sql_height = f"COALESCE({build_height}, {default_build_height})"
     else:
@@ -648,6 +644,7 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                         {GEOM_FIELD},
                         {HEIGHT_FIELD},
                         {BUILDING_WWR},
+                        {BUILD_SIZE_CLASS},
                         {", ".join(sql_properties.values())}
             FROM TEMPO_BUILDING_3
         """)    

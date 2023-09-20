@@ -147,8 +147,8 @@ S_GROUND = pd.Series({1: "sol nu",
 S_CANOPY = pd.Series({10: "arbre isole",
                       20: "boise", 
                       30: "boise dense"})
-S_GROUND_CANOPY = S_GROUND.append(pd.Series({i+j: S_GROUND[i] + " / " + S_CANOPY[j]
-                             for i in S_GROUND.index for j in S_CANOPY.index}))
+S_GROUND_CANOPY = pd.concat([S_GROUND, pd.Series({i+j: S_GROUND[i] + " / " + S_CANOPY[j]
+                             for i in S_GROUND.index for j in S_CANOPY.index})])
 
 # Combination of ground / canopy that cannot exist or need to be replace
 REPLACE_COMBI = pd.Series({2: 3, 12: 13, 22: 23, 32: 33})
@@ -161,9 +161,9 @@ DEFAULT_COMBI = 1
 #################### BUILDING RELATED INFORMATIONS ############################
 ###############################################################################
 # Building size classes
-BUILDING_SIZE_CLASSES = pd.DataFrame({"name" : ["Maison Individuelle", 
-                                                "Petit Logement Collectif", 
-                                                "Grand Logement Collectif"],
+BUILDING_SIZE_CLASSES = pd.DataFrame({"name" : ["MI", 
+                                                "PLC", 
+                                                "GLC"],
                                       "low_limit" : [3, 6, 9]},
                                      index = [1,2,3])
 

@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['functions/mainCalculations.py', 'functions/globalVariables.py', '../coolparkstool_test.py', 'functions/coolparks_calc.py']
+recent_files = ['functions/mainCalculations.py', 'functions/globalVariables.py', '../coolparkstool_test.py', 'functions/coolparks_calc.py', 'functions/coolparks_postprocess.py', 'functions/create_transport_models.py', 'functions/DataUtil.py', 'functions/H2gisConnection.py', 'functions/loadData.py', 'functions/Obstacles.py', 'functions/regression_functions.py', 'functions/saveData.py', 'functions/coolparks_prepare.py', 'processing_algorithm.py', 'preprocessing_algorithm.py']
 
 [main]
 version = 0.2.0

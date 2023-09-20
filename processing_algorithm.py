@@ -49,7 +49,6 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterEnum,
                        QgsProcessingParameterFile,
                        QgsProcessingException)
-from qgis.PyQt.QtWidgets import QMessageBox
 # qgis.utils import iface
 from pathlib import Path
 from qgis.PyQt.QtGui import QIcon
@@ -92,7 +91,7 @@ class CoolParksProcessorAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFile(
                 self.SCENARIO_DIRECTORY,
-                self.tr('Directory of the scenario of interest'),
+                self.tr('Directory of the scenario of interest (should contain two folders called "preprocessor_outputs" and "processor_outputs"'),
                 behavior=QgsProcessingParameterFile.Folder))
         self.addParameter(
             QgsProcessingParameterFile(
@@ -194,12 +193,12 @@ class CoolParksProcessorAlgorithm(QgsProcessingAlgorithm):
         return QCoreApplication.translate('Processing', string)
     
     def shortHelpString(self):
-        return self.tr("""The CoolParksTool '2. Calculate park effects' module is used 
-                       to calculate:\n
-                           - the effect of the park composition on the cooling,
-                           - the effect of the urban morphology on the transport of cool air,
-                           - the effect of the cool air on building energy and building 
-                           thermal comfort"""
+        return self.tr('The CoolParksTool "2. Calculate park effects" module is used '+
+                       'to calculate:\n'+
+                       '    - the effect of the park composition on the cooling,\n'+
+                       '    - the effect of the urban morphology on the transport of cool air,\n'+
+                       '    - the effect of the cool air on building energy and building '+
+                       '    thermal comfort\n'
         '\n'
         '\n'
         """You need to first use the '1. Prepare data' for each new scenario you 

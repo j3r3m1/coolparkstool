@@ -1,0 +1,6 @@
+shapely
+geopandas
+osgeo
+qgis
+statsmodels
+unidecode

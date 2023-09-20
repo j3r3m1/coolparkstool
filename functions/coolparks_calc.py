@@ -489,10 +489,12 @@ def build_impact_formula(df_indic, variable):
                 For each building, the effect on the building (either energy or thermal comfort)"""
     df_effect = pd.Series(index = df_indic.index)
     
+    df_indic[BUILDING_SHUTTER] = np.ones(df_indic.index.size)
+    
     # The number of models is equal to the combination of all values included within variables
     list_of_possible = [df_indic[BUILD_GEOM_TYPE].unique(),
                         df_indic[BUILD_NORTH_ORIENTATION].unique(),
-                        df_indic[BUILDING_CLASS].unique()]
+                        df_indic[BUILD_SIZE_CLASS].unique()]
     all_combi = list(itertools.product(*list_of_possible))
     
     if variable == "NRJ":
@@ -505,17 +507,17 @@ def build_impact_formula(df_indic, variable):
         # Get the name corresponding to each type
         gt = BUILDING_GEOMETRY_CLASSES.loc[gt_c, "name"]
         ot = ORIENTATIONS.loc[ot_c, "name"]
-        bc = BUILDING_PROPERTIES.loc[bc_c, "Name"]
+        bc = BUILDING_SIZE_CLASSES.loc[bc_c, "name"]
         
         # Load regression coefficients
-        df_coef = pd.read_csv(path_to_file + os.sep + f"{gt}_{ot}_{bc}.csv",
+        df_coef = pd.read_csv(path_to_file + os.sep + f"{bc}_{gt}_{ot}.csv",
                               header = 0,
                               index_col = 0)
         
         # Keep only buildings having the current combination of types
         condition = (df_indic[BUILD_GEOM_TYPE] == gt_c)\
             * (df_indic[BUILD_NORTH_ORIENTATION] == ot_c)\
-                * (df_indic[BUILDING_CLASS] == bc_c)
+                * (df_indic[BUILD_SIZE_CLASS] == bc_c)
         idx_build = df_indic[condition].index
         
         # Calculates the energy needed by the building

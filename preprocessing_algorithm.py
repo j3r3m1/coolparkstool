@@ -52,8 +52,6 @@ from qgis.core import (QgsProcessing,
 from qgis.PyQt.QtWidgets import QMessageBox
 # qgis.utils import iface
 from pathlib import Path
-import subprocess
-import pandas as pd
 import struct
 from qgis.PyQt.QtGui import QIcon
 import inspect
@@ -87,8 +85,6 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
     DEFAULT_BUILD_HEIGHT = "DEFAULT_BUILD_HEIGHT"
     BUILD_AGE_FIELD = "BUILD_AGE"
     DEFAULT_BUILD_AGE = "DEFAULT_BUILD_AGE"
-    BUILD_RENOV_FIELD = "BUILD_RENOV"
-    DEFAULT_BUILD_RENOV = "DEFAULT_BUILD_RENOV"
     BUILD_WWR_FIELD = "BUILD_WWR"
     DEFAULT_BUILD_WWR = "DEFAULT_BUILD_WWR"
     
@@ -153,20 +149,6 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                 QgsProcessingParameterNumber.Integer,
                 BUILDING_DEFAULT_AGE,
                 True))
-        # BUILDIND RENOVATION
-        self.addParameter(
-            QgsProcessingParameterField(
-                self.BUILD_RENOV_FIELD,
-                self.tr('Building renovation field'),
-                None,
-                self.BUILDING_TABLE_NAME,
-                QgsProcessingParameterField.Numeric,
-                optional = True))
-        self.addParameter(
-            QgsProcessingParameterBoolean(
-                self.DEFAULT_BUILD_RENOV,
-                self.tr("By default, are buildings renovated ?"),
-                defaultValue=BUILDING_DEFAULT_RENOVATION))
         # BUILDIND WWR
         self.addParameter(
             QgsProcessingParameterField(
@@ -275,14 +257,12 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         # Defines default buiding values
         def_build_height = self.parameterAsInt(parameters, self.DEFAULT_BUILD_HEIGHT, context)
         def_build_age = self.parameterAsInt(parameters, self.DEFAULT_BUILD_AGE, context)
-        def_build_renov = self.parameterAsBoolean(parameters, self.DEFAULT_BUILD_RENOV, context)
         def_build_wwr = self.parameterAsDouble(parameters, self.DEFAULT_BUILD_WWR, context)
         
         # Get building layer and then file directory
         inputBuildinglayer = self.parameterAsVectorLayer(parameters, self.BUILDING_TABLE_NAME, context)
         buildHeight = self.parameterAsString(parameters, self.BUILD_HEIGHT_FIELD, context)
         buildAge = self.parameterAsString(parameters, self.BUILD_AGE_FIELD, context)
-        buildRenov = self.parameterAsString(parameters, self.BUILD_RENOV_FIELD, context)
         buildWWR = self.parameterAsString(parameters, self.BUILD_WWR_FIELD, context)
         
         if inputBuildinglayer:
@@ -366,15 +346,12 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                                         srid = srid_build,
                                         build_height = buildHeight,
                                         build_age = buildAge,
-                                        build_renovation = buildRenov,
                                         build_wwr = buildWWR,
                                         default_build_height = def_build_height,
                                         default_build_age = def_build_age,
-                                        default_build_renov = def_build_renov,
                                         default_build_wwr = def_build_wwr,                                        
                                         nAlongWind = N_ALONG_WIND_PARK,
                                         nCrossWind = N_CROSS_WIND_PARK,
-                                        nCrossWindOut = N_CROSS_WIND_OUTSIDE,
                                         feedback = feedback,
                                         output_directory = outputDirectory,
                                         prefix = prefix)
@@ -422,11 +399,11 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         return QCoreApplication.translate('Processing', string)
     
     def shortHelpString(self):
-        return self.tr("""The CoolParksTool '1. Prepare data' module is used 
-                       to characterize a given scenario:
-                           - the park composition along several wind directions,
-                           - the urban morphology along several wind directions,
-                           - the building types"""
+        return self.tr('The CoolParksTool "1. Prepare data" module is used '+
+                       'to characterize a given scenario:\n'+
+                       '    - the park composition along several wind directions,\n'+
+                       '    - the urban morphology along several wind directions,\n'+
+                       '    - the building types'
         '\n'
         '\n'
         'This tools requires Java. If Java is not installed on your system,'+ 

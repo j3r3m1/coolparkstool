@@ -12,8 +12,6 @@ from .Obstacles import windRotation
 from osgeo.gdal import Grid, GridOptions
 from .globalVariables import DELETE_OUTPUT_IF_EXISTS,\
     OUTPUT_RASTER_EXTENSION
-from datetime import datetime
-import netCDF4 as nc4
 import os
     
 def saveTable(cursor, tableName, filedir, delete = False, 
