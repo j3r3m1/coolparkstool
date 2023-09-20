@@ -157,12 +157,12 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
                 raise QgsProcessingException(f'Reference and alternative scenario are not located in the same area')
         
         # Test that the parks have exactly the same shape (only composition should differ !!)
-        park_ref = gpd.read_file(os.path.join(Path(refScenarioDirectory).parent.parent.as_uri(), 
-                                              OUTPUT_PREPROCESSOR_FOLDER,
-                                              PARK_BOUNDARIES_TAB + ".geojson"))
-        park_alt = gpd.read_file(os.path.join(Path(altScenarioDirectory).parent.parent.as_uri(), 
-                                              OUTPUT_PREPROCESSOR_FOLDER, 
-                                              PARK_BOUNDARIES_TAB + ".geojson"))
+        park_ref = gpd.read_file(Path(refScenarioDirectory).parent.parent\
+                                 .joinpath(Path(os.path.join(OUTPUT_PREPROCESSOR_FOLDER,
+                                                             PARK_BOUNDARIES_TAB + ".geojson"))))
+        park_alt = gpd.read_file(Path(altScenarioDirectory).parent.parent\
+                                 .joinpath(Path(os.path.join(OUTPUT_PREPROCESSOR_FOLDER,
+                                                             PARK_BOUNDARIES_TAB + ".geojson"))))
         if (park_ref.intersection(park_alt).area != park_ref.area)[0]:
             raise QgsProcessingException(f'Only park composition should differ between the reference and alternative parks. In your case, park shape differs')
 
