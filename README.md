@@ -59,6 +59,11 @@ Quelle que soit la solution choisie, vous devez maintenant avoir QGIS ouvert dan
 - de télécharger le zip de CoolParksTool depuis le dépôt GitHub : https://github.com/j3r3m1/coolparkstool/archive/refs/heads/main.zip
 - d’ouvrir le menu de gestion des librairies via “Extensions → gérer les XXX” puis sélectionner “install from zip” dans le ruban de gauche
 - de sélectionner le zip de CoolParksTool préalablement téléchargé et cliquer sur “Installer”
+- un message sur fond vers vous informant du succès de l'installation doit normalement apparaître temporairement. Lorsque vous ouvrez la boîte à outil de QGIS, le plug-in CoolParks tool doit maintenant apparaître (cf. Figure ci-dessous)
+
+![image](https://github.com/j3r3m1/coolparkstool/assets/13120405/20b24f01-5c53-48ae-91ba-0c8884f7d78f)
+
+
  
 ## Acknowledgements
 This work has been performed within the research project CoolParks co-funded by the French Agency ADEME (grant number 1917C0002).
