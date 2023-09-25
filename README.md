@@ -43,15 +43,14 @@ Pour l’utiliser :
 Anaconda permet de gérer l’installation de librairies Python via la création d’environnements dédiés à un besoin donné. Il permet également de s’assurer de l’intercompatibilité des librairies entre elles dans un environnement donné. 
 
 Pour l’utiliser :
-- télécharger la version d’anaconda propre à votre système d’exploitation : https://www.anaconda.com/download#downloads
-- lancer l’installation
+- suiver les recommandations d'installation relatives à votre système d'exploitation : https://docs.anaconda.com/free/anaconda/install
 - il s’agit maintenant de créer un nouvel environnement dédié à l’utilisation de CoolParksTool et d’installer les librairies nécessaires à son fonctionnement dans cet environnement. Pour cela, deux solutions existent :
     - si vous avez installé anaconda en mode “ligne de commande” :
         - ouvrer un terminal
         - créer un nouvel environnement : conda create --name coolparks
         - activer cet environnement : conda activate coolparks
         - ajouter une nouvelle source de librairies d’où anaconda pourra télécharger des librairies : conda config --add channels conda-forge
-        - installer les librairies (cela peut prendre un temps considérable de gérer les dépendances) : conda install gdal qgis shapely geopandas unidecode statsmodels
+        - installer les librairies (cela peut prendre un temps considérable de gérer les dépendances) : conda install gdal qgis shapely geopandas unidecode statsmodels jaydebeapi
         - lancer QGIS via le terminal en tapant : qgis
     - si vous avez installé anaconda en mode “graphique” :
 
@@ -60,6 +59,11 @@ Quelle que soit la solution choisie, vous devez maintenant avoir QGIS ouvert dan
 - de télécharger le zip de CoolParksTool depuis le dépôt GitHub : https://github.com/j3r3m1/coolparkstool/archive/refs/heads/main.zip
 - d’ouvrir le menu de gestion des librairies via “Extensions → gérer les XXX” puis sélectionner “install from zip” dans le ruban de gauche
 - de sélectionner le zip de CoolParksTool préalablement téléchargé et cliquer sur “Installer”
+- un message sur fond vers vous informant du succès de l'installation doit normalement apparaître temporairement. Lorsque vous ouvrez la boîte à outil de QGIS, le plug-in CoolParks tool doit maintenant apparaître (cf. Figure ci-dessous)
+
+![image](https://github.com/j3r3m1/coolparkstool/assets/13120405/20b24f01-5c53-48ae-91ba-0c8884f7d78f)
+
+
  
 ## Acknowledgements
 This work has been performed within the research project CoolParks co-funded by the French Agency ADEME (grant number 1917C0002).
