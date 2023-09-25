@@ -38,9 +38,11 @@ def prepareData(plugin_directory,
                 build_height,
                 build_age,
                 build_wwr,
+                build_shutter,
                 default_build_height = BUILDING_DEFAULT_HEIGHT,
                 default_build_age = BUILDING_DEFAULT_AGE,
                 default_build_wwr = BUILDING_DEFAULT_WINDOWS_WALL_RATIO,
+                default_build_shutter = BUILDING_DEFAULT_SHUTTER,
                 nAlongWind = N_ALONG_WIND_PARK,
                 nCrossWind = N_CROSS_WIND_PARK,
                 feedback = None,
@@ -99,9 +101,11 @@ def prepareData(plugin_directory,
                                              build_height = build_height,
                                              build_age = build_age,
                                              build_wwr = build_wwr,
+                                             build_shutter = build_shutter,
                                              default_build_height = default_build_height, 
                                              default_build_age = default_build_age,
-                                             default_build_wwr = default_build_wwr)
+                                             default_build_wwr = default_build_wwr,
+                                             default_build_shutter = default_build_shutter)
     
     # Test input data
     prep_fct.testInputData(cursor = cursor)
@@ -356,7 +360,7 @@ def calcParkInfluence(weatherFilePath,
         selected_dates = pd.date_range(start = datetime.datetime(year, start_month, start_day, tp),
                                        end = datetime.datetime(year, end_month, end_day),
                                        freq = pd.offsets.Day(1))
-        df_met_sel = df_met.reindex(selected_dates)
+        df_met_sel = df_met.reindex(selected_dates).dropna()
         
         # Calculates the DPV
         df_met_sel[DPV] = calc_fct.dpv_calc(df_met_sel)
@@ -755,9 +759,12 @@ def compareScenarios(refScenarioDirectory,
         raster_dt_ref = gdal.Open(f'{deltaT_ref_path}')
         raster_dt_alt = gdal.Open(f'{deltaT_alt_path}')
         raster_dt_diff = gdal.Open(f'{diff_deltaT_path[tp]}')
-        val_ref = round_to(np.nanmean(raster_dt_ref.ReadAsArray()), NB_SIGN_DIGITS)
-        val_alt = round_to(np.nanmean(raster_dt_alt.ReadAsArray()), NB_SIGN_DIGITS)
-        val_diff = round_to(np.nanmean(raster_dt_diff.ReadAsArray()), NB_SIGN_DIGITS)
+        dt_array_ref = raster_dt_ref.ReadAsArray()
+        dt_array_alt = raster_dt_alt.ReadAsArray()
+        dt_array_diff = raster_dt_diff.ReadAsArray()
+        val_ref = round_to(np.nanmean(dt_array_ref[(dt_array_ref>-9999) * (dt_array_ref<9999)] ), NB_SIGN_DIGITS)
+        val_alt = round_to(np.nanmean(dt_array_alt[(dt_array_alt>-9999) * (dt_array_alt<9999)]), NB_SIGN_DIGITS)
+        val_diff = round_to(np.nanmean(dt_array_diff[(dt_array_diff>-9999) * (dt_array_diff<9999)]), NB_SIGN_DIGITS)
         
         dict_deltaT_glob[tp] = {REF_SCEN: str(val_ref),
                                 ALT_SCEN: str(val_alt),

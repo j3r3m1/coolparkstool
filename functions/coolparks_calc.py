@@ -489,8 +489,6 @@ def build_impact_formula(df_indic, variable):
                 For each building, the effect on the building (either energy or thermal comfort)"""
     df_effect = pd.Series(index = df_indic.index)
     
-    df_indic[BUILDING_SHUTTER] = np.ones(df_indic.index.size)
-    
     # The number of models is equal to the combination of all values included within variables
     list_of_possible = [df_indic[BUILD_GEOM_TYPE].unique(),
                         df_indic[BUILD_NORTH_ORIENTATION].unique(),
@@ -513,6 +511,9 @@ def build_impact_formula(df_indic, variable):
         df_coef = pd.read_csv(path_to_file + os.sep + f"{bc}_{gt}_{ot}.csv",
                               header = 0,
                               index_col = 0)
+        # Shutter is in lower case in the coefficients while in upper case otherwise...
+        df_coef.loc[:, "var1"] = df_coef.loc[:, "var1"].str.upper()
+        df_coef.loc[:, "var2"] = df_coef.loc[:, "var2"].str.upper()
         
         # Keep only buildings having the current combination of types
         condition = (df_indic[BUILD_GEOM_TYPE] == gt_c)\

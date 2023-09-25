@@ -87,6 +87,8 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
     DEFAULT_BUILD_AGE = "DEFAULT_BUILD_AGE"
     BUILD_WWR_FIELD = "BUILD_WWR"
     DEFAULT_BUILD_WWR = "DEFAULT_BUILD_WWR"
+    BUILD_SHUTTER_FIELD = "BUILD_SHUTTER"
+    DEFAULT_BUILD_SHUTTER = "DEFAULT_BUILD_SHUTTER"
     
     PARK_GROUND_TYPE_FIELD = "PARK_GROUND_TYPE"
     PARK_CANOPY_TYPE_FIELD = "PARK_CANOPY_TYPE"
@@ -167,6 +169,24 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                 False,
                 minValue=0.05, 
                 maxValue=0.95))
+        # BUILDING Shutter
+        self.addParameter(
+            QgsProcessingParameterField(
+                self.BUILD_SHUTTER_FIELD,
+                self.tr('Building windows-to-wall ratio field'),
+                None,
+                self.BUILDING_TABLE_NAME,
+                QgsProcessingParameterField.Numeric,
+                optional = True))  
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.DEFAULT_BUILD_SHUTTER,
+                self.tr('Default building shutter opening'), 
+                QgsProcessingParameterNumber.Double,
+                QVariant(BUILDING_DEFAULT_SHUTTER), 
+                False,
+                minValue=0, 
+                maxValue=1))        
         
         # PARK BOUNDARIES
         self.addParameter(
@@ -250,13 +270,15 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         def_build_height = self.parameterAsInt(parameters, self.DEFAULT_BUILD_HEIGHT, context)
         def_build_age = self.parameterAsInt(parameters, self.DEFAULT_BUILD_AGE, context)
         def_build_wwr = self.parameterAsDouble(parameters, self.DEFAULT_BUILD_WWR, context)
-        
+        def_build_shutter = self.parameterAsDouble(parameters, self.DEFAULT_BUILD_SHUTTER, context)
+                
         # Get building layer and then file directory
         inputBuildinglayer = self.parameterAsVectorLayer(parameters, self.BUILDING_TABLE_NAME, context)
         buildHeight = self.parameterAsString(parameters, self.BUILD_HEIGHT_FIELD, context)
         buildAge = self.parameterAsString(parameters, self.BUILD_AGE_FIELD, context)
         buildWWR = self.parameterAsString(parameters, self.BUILD_WWR_FIELD, context)
-        
+        buildShutter = self.parameterAsString(parameters, self.BUILD_SHUTTER_FIELD, context)
+                
         if inputBuildinglayer:
             build_file = str(inputBuildinglayer.dataProvider().dataSourceUri())
             if build_file.count("|layername") == 1:
@@ -339,9 +361,11 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                                         build_height = buildHeight,
                                         build_age = buildAge,
                                         build_wwr = buildWWR,
+                                        build_shutter = buildShutter,
                                         default_build_height = def_build_height,
                                         default_build_age = def_build_age,
                                         default_build_wwr = def_build_wwr,                                        
+                                        default_build_shutter = def_build_shutter,                                        
                                         nAlongWind = N_ALONG_WIND_PARK,
                                         nCrossWind = N_CROSS_WIND_PARK,
                                         feedback = feedback,

@@ -470,9 +470,9 @@ def loadInputData(cursor, parkBoundaryFilePath, parkGroundFilePath,
     
     
 def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
-                    build_height, build_age, build_wwr,
+                    build_height, build_age, build_wwr, build_shutter,
                     default_build_height, default_build_age, 
-                    default_build_wwr):
+                    default_build_wwr, default_build_shutter):
     """ Modify or fill input data (buildings as well as park ground and canopy layers)
     to have all needed data for the next steps.
 
@@ -493,12 +493,16 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                 Name of the building age field
             build_wwr: String
                 Name of the building windows-to-wall ratio field
+            build_shutter: String
+                Name of the building shutter opening
             default_build_height: int
                 Default building height value
             default_build_age: int
                 Default building age (construction year)
             default_build_wwr: float
                 Default building windows-to-wall ratio
+            default_build_shutter: float
+                Default building shutter opening
             
         
 		Returns
@@ -582,6 +586,10 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
         sql_wwr = f"COALESCE({build_wwr}, {default_build_wwr})"
     else:
         sql_wwr = f"{default_build_wwr}"
+    if build_shutter and build_shutter != "":
+        sql_shutter = f"COALESCE({build_shutter}, {default_build_shutter})"
+    else:
+        sql_shutter = f"{default_build_shutter}"
     cursor.execute(
         f"""
         DROP TABLE IF EXISTS TEMPO_BUILDING_2;
@@ -589,12 +597,14 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                                       {GEOM_FIELD} GEOMETRY,
                                       {HEIGHT_FIELD} DOUBLE,
                                       {BUILDING_AGE} INTEGER,
-                                      {BUILDING_WWR} DOUBLE)
+                                      {BUILDING_WWR} DOUBLE,
+                                      {BUILDING_SHUTTER} DOUBLE)
             AS SELECT   NULL,
                         ST_MAKEVALID(ST_NORMALIZE({GEOM_FIELD})) AS {GEOM_FIELD},
                         {sql_height} AS {HEIGHT_FIELD},
                         {sql_age} AS {BUILDING_AGE},
-                        {sql_wwr} AS {BUILDING_WWR}
+                        {sql_wwr} AS {BUILDING_WWR},
+                        {sql_shutter} AS {BUILDING_SHUTTER}
             FROM TEMPO_BUILDING_1
         """)
     
@@ -613,6 +623,7 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                         {GEOM_FIELD},
                         {HEIGHT_FIELD},
                         {BUILDING_WWR},
+                        {BUILDING_SHUTTER},
                         {BUILDING_AGE},
                         CASE {casewhen_sql} END AS {BUILD_SIZE_CLASS}
             FROM TEMPO_BUILDING_2
@@ -644,6 +655,7 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                         {GEOM_FIELD},
                         {HEIGHT_FIELD},
                         {BUILDING_WWR},
+                        {BUILDING_SHUTTER},
                         {BUILD_SIZE_CLASS},
                         {", ".join(sql_properties.values())}
             FROM TEMPO_BUILDING_3
@@ -2067,7 +2079,7 @@ def building_orientation(cursor, buildings, shared_wall):
                                 THEN    1
                         END AS {BUILD_NORTH_ORIENTATION}
             FROM {orientation_ranking}
-            WHERE {BUILD_GEOM_TYPE} = 12
+            WHERE {BUILD_GEOM_TYPE} = 1 OR {BUILD_GEOM_TYPE} = 2
             UNION ALL
             SELECT  {ID_FIELD_BUILD}, 
                     {BUILD_GEOM_TYPE},
