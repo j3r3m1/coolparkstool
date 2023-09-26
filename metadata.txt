@@ -3,7 +3,7 @@
 # This file should be included when you package your plugin.# Mandatory items:
 
 [general]
-name=UMEP for processing
+name=CoolParksTool
 qgisMinimumVersion=3.0
 description=This plugin evaluates the cooling effect of a park and its impact on buildings energy and thermal comfort
 version=0.1
