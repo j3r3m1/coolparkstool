@@ -194,6 +194,7 @@ BUILDING_DEFAULT_RENOVATION = False
 BUILDING_DEFAULT_HEIGHT = 9
 BUILDING_DEFAULT_WINDOWS_WALL_RATIO = 0.2
 BUILDING_DEFAULT_SHUTTER = 1
+BUILDING_DEFAULT_NAT_VENTIL = 0.6
 
 # Building properties per building age and building size class (cf. index of BUILDING_SIZE_CLASS)
 BUILDING_PROPERTIES = {1: pd.DataFrame({"Name": ["Construit avant 1915",
@@ -219,7 +220,6 @@ BUILDING_PROPERTIES = {1: pd.DataFrame({"Name": ["Construit avant 1915",
                                         BUILDING_USLAB : [1.89,.965,1.515,1.365,
                                                           1.305,.745,.3,.38,.185,.165],
                                         BUILDING_INFILTRATION_RATE : [3,3,3,3,2,2,1.5,1.5,1.3,.6],
-                                        BUILDING_NATURAL_VENT_RATE : [.6,.6,.6,.6,2,2,2,2,2,2],
                                         BUILDING_MECHANICAL_VENT_RATE : [0,0,.6,.6,.6,.6,.6,.6,.6,.6]},
                                         index = np.arange(1,11)),
                        2: pd.DataFrame({"Name": ["Construit avant 1915",
@@ -245,7 +245,6 @@ BUILDING_PROPERTIES = {1: pd.DataFrame({"Name": ["Construit avant 1915",
                                         BUILDING_USLAB : [1.89,1.515,1.565,1.365,.74,
                                                           .375,.36,.285,.24,.165],
                                         BUILDING_INFILTRATION_RATE : [3,3,3,3,2,2,1.7,1.7,1.7,1],
-                                        BUILDING_NATURAL_VENT_RATE : [.6,.6,.6,.6,2,2,2,2,2,2],
                                         BUILDING_MECHANICAL_VENT_RATE : [0,0,.6,.6,.6,.6,.6,.6,.6,.6]},
                                         index = np.arange(1,11)),
                        3: pd.DataFrame({"Name": ["Construit avant 1915",
@@ -271,7 +270,6 @@ BUILDING_PROPERTIES = {1: pd.DataFrame({"Name": ["Construit avant 1915",
                                         BUILDING_USLAB : [1.565,1.515,1.365,1.365,
                                                           .335,.315,.315,.275,.2,.22],
                                         BUILDING_INFILTRATION_RATE : [3,3,3,3,2,2,1.7,1.7,1.7,1],
-                                        BUILDING_NATURAL_VENT_RATE : [.6,.6,.6,.6,2,2,2,2,2,2],
                                         BUILDING_MECHANICAL_VENT_RATE : [0,0,.6,.6,.6,.6,.6,.6,.6,.6]},
                                         index = np.arange(1,11))}
 

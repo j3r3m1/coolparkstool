@@ -470,9 +470,10 @@ def loadInputData(cursor, parkBoundaryFilePath, parkGroundFilePath,
     
     
 def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
-                    build_height, build_age, build_wwr, build_shutter,
+                    build_height, build_age, build_wwr, build_shutter, build_nat_ventil,
                     default_build_height, default_build_age, 
-                    default_build_wwr, default_build_shutter):
+                    default_build_wwr, default_build_shutter,
+                    default_build_nat_ventil):
     """ Modify or fill input data (buildings as well as park ground and canopy layers)
     to have all needed data for the next steps.
 
@@ -494,7 +495,9 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
             build_wwr: String
                 Name of the building windows-to-wall ratio field
             build_shutter: String
-                Name of the building shutter opening
+                Name of the building shutter opening field
+            build_nat_ventil: String
+                Name of the building natural ventilation rate field
             default_build_height: int
                 Default building height value
             default_build_age: int
@@ -503,6 +506,8 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                 Default building windows-to-wall ratio
             default_build_shutter: float
                 Default building shutter opening
+            default_build_nat_ventil: float
+                Default building natural ventilation rate (vol/h)
             
         
 		Returns
@@ -573,7 +578,7 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                              {distance_max})
         """)
     
-    # Fill missing building age with missing values
+    # Fill missing building info with default values
     if build_height and build_height != "":
         sql_height = f"COALESCE({build_height}, {default_build_height})"
     else:
@@ -590,6 +595,10 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
         sql_shutter = f"COALESCE({build_shutter}, {default_build_shutter})"
     else:
         sql_shutter = f"{default_build_shutter}"
+    if build_nat_ventil and build_nat_ventil != "":
+        sql_nat_ventil = f"COALESCE({build_nat_ventil}, {default_build_nat_ventil})"
+    else:
+        sql_nat_ventil = f"{default_build_nat_ventil}"
     cursor.execute(
         f"""
         DROP TABLE IF EXISTS TEMPO_BUILDING_2;
@@ -598,13 +607,15 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                                       {HEIGHT_FIELD} DOUBLE,
                                       {BUILDING_AGE} INTEGER,
                                       {BUILDING_WWR} DOUBLE,
-                                      {BUILDING_SHUTTER} DOUBLE)
+                                      {BUILDING_SHUTTER} DOUBLE,
+                                      {BUILDING_NATURAL_VENT_RATE} DOUBLE)
             AS SELECT   NULL,
                         ST_MAKEVALID(ST_NORMALIZE({GEOM_FIELD})) AS {GEOM_FIELD},
                         {sql_height} AS {HEIGHT_FIELD},
                         {sql_age} AS {BUILDING_AGE},
                         {sql_wwr} AS {BUILDING_WWR},
-                        {sql_shutter} AS {BUILDING_SHUTTER}
+                        {sql_shutter} AS {BUILDING_SHUTTER},
+                        {sql_nat_ventil} AS {BUILDING_NATURAL_VENT_RATE}
             FROM TEMPO_BUILDING_1
         """)
     
@@ -624,6 +635,7 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                         {HEIGHT_FIELD},
                         {BUILDING_WWR},
                         {BUILDING_SHUTTER},
+                        {BUILDING_NATURAL_VENT_RATE},
                         {BUILDING_AGE},
                         CASE {casewhen_sql} END AS {BUILD_SIZE_CLASS}
             FROM TEMPO_BUILDING_2
@@ -656,6 +668,7 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                         {HEIGHT_FIELD},
                         {BUILDING_WWR},
                         {BUILDING_SHUTTER},
+                        {BUILDING_NATURAL_VENT_RATE},
                         {BUILD_SIZE_CLASS},
                         {", ".join(sql_properties.values())}
             FROM TEMPO_BUILDING_3

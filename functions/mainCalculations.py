@@ -39,10 +39,12 @@ def prepareData(plugin_directory,
                 build_age,
                 build_wwr,
                 build_shutter,
+                build_nat_ventil,
                 default_build_height = BUILDING_DEFAULT_HEIGHT,
                 default_build_age = BUILDING_DEFAULT_AGE,
                 default_build_wwr = BUILDING_DEFAULT_WINDOWS_WALL_RATIO,
                 default_build_shutter = BUILDING_DEFAULT_SHUTTER,
+                default_build_nat_ventil = BUILDING_DEFAULT_NAT_VENTIL,
                 nAlongWind = N_ALONG_WIND_PARK,
                 nCrossWind = N_CROSS_WIND_PARK,
                 feedback = None,
@@ -102,10 +104,12 @@ def prepareData(plugin_directory,
                                              build_age = build_age,
                                              build_wwr = build_wwr,
                                              build_shutter = build_shutter,
+                                             build_nat_ventil = build_nat_ventil,
                                              default_build_height = default_build_height, 
                                              default_build_age = default_build_age,
                                              default_build_wwr = default_build_wwr,
-                                             default_build_shutter = default_build_shutter)
+                                             default_build_shutter = default_build_shutter,
+                                             default_build_nat_ventil = default_build_nat_ventil)
     
     # Test input data
     prep_fct.testInputData(cursor = cursor)
@@ -378,8 +382,6 @@ def calcParkInfluence(weatherFilePath,
         # (sum on a different grid depending on wind direction)
         for d in df_met_sel.index:
             wd = df_met_sel.loc[d, WDIR]
-            if wd == 121:
-                grid_sum_deltatair[wd_range]
             print(wd)
             wd_range = [i for i in dirs if (wd >= i and wd < i + 360./ndir)][0]
             weights[wd_range] += 1

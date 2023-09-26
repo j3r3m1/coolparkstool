@@ -89,6 +89,8 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
     DEFAULT_BUILD_WWR = "DEFAULT_BUILD_WWR"
     BUILD_SHUTTER_FIELD = "BUILD_SHUTTER"
     DEFAULT_BUILD_SHUTTER = "DEFAULT_BUILD_SHUTTER"
+    BUILD_NAT_VENTIL_FIELD = "BUILD_NAT_VENTIL"
+    DEFAULT_BUILD_NAT_VENTIL = "DEFAULT_BUILD_NAT_VENTIL"
     
     PARK_GROUND_TYPE_FIELD = "PARK_GROUND_TYPE"
     PARK_CANOPY_TYPE_FIELD = "PARK_CANOPY_TYPE"
@@ -167,8 +169,8 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                 QgsProcessingParameterNumber.Double,
                 QVariant(BUILDING_DEFAULT_WINDOWS_WALL_RATIO), 
                 False,
-                minValue=0.05, 
-                maxValue=0.95))
+                minValue=0.2, 
+                maxValue=0.8))
         # BUILDING Shutter
         self.addParameter(
             QgsProcessingParameterField(
@@ -186,7 +188,25 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                 QVariant(BUILDING_DEFAULT_SHUTTER), 
                 False,
                 minValue=0, 
-                maxValue=1))        
+                maxValue=1))
+        # BUILDING natural ventilation
+        self.addParameter(
+            QgsProcessingParameterField(
+                self.BUILD_NAT_VENTIL_FIELD,
+                self.tr('Building natural ventilation rate field'),
+                None,
+                self.BUILDING_TABLE_NAME,
+                QgsProcessingParameterField.Numeric,
+                optional = True))  
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.DEFAULT_BUILD_NAT_VENTIL,
+                self.tr('Default natural ventilation rate (vol/h)'), 
+                QgsProcessingParameterNumber.Double,
+                QVariant(BUILDING_DEFAULT_NAT_VENTIL), 
+                False,
+                minValue=0.6, 
+                maxValue=2))        
         
         # PARK BOUNDARIES
         self.addParameter(
@@ -271,13 +291,15 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         def_build_age = self.parameterAsInt(parameters, self.DEFAULT_BUILD_AGE, context)
         def_build_wwr = self.parameterAsDouble(parameters, self.DEFAULT_BUILD_WWR, context)
         def_build_shutter = self.parameterAsDouble(parameters, self.DEFAULT_BUILD_SHUTTER, context)
-                
+        def_build_nat_ventil = self.parameterAsDouble(parameters, self.DEFAULT_BUILD_NAT_VENTIL, context)
+                        
         # Get building layer and then file directory
         inputBuildinglayer = self.parameterAsVectorLayer(parameters, self.BUILDING_TABLE_NAME, context)
         buildHeight = self.parameterAsString(parameters, self.BUILD_HEIGHT_FIELD, context)
         buildAge = self.parameterAsString(parameters, self.BUILD_AGE_FIELD, context)
         buildWWR = self.parameterAsString(parameters, self.BUILD_WWR_FIELD, context)
         buildShutter = self.parameterAsString(parameters, self.BUILD_SHUTTER_FIELD, context)
+        buildNatVentil = self.parameterAsString(parameters, self.BUILD_NAT_VENTIL_FIELD, context)
                 
         if inputBuildinglayer:
             build_file = str(inputBuildinglayer.dataProvider().dataSourceUri())
@@ -362,10 +384,12 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                                         build_age = buildAge,
                                         build_wwr = buildWWR,
                                         build_shutter = buildShutter,
+                                        build_nat_ventil = buildNatVentil,
                                         default_build_height = def_build_height,
                                         default_build_age = def_build_age,
                                         default_build_wwr = def_build_wwr,                                        
                                         default_build_shutter = def_build_shutter,                                        
+                                        default_build_nat_ventil = def_build_nat_ventil,                                       
                                         nAlongWind = N_ALONG_WIND_PARK,
                                         nCrossWind = N_CROSS_WIND_PARK,
                                         feedback = feedback,
