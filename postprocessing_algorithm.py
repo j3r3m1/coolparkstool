@@ -305,7 +305,7 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
         if diff_build_path:
             for var in diff_build_extremums:
                 loadCoolParksVector(filepath = diff_build_path,
-                                    layername = var,
+                                    layername = BUILDING_LEGEND[var],
                                     variable = var,
                                     subgroup = new_group,
                                     vector_min = diff_build_extremums[var][0],

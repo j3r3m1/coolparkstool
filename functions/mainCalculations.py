@@ -688,7 +688,7 @@ def compareScenarios(refScenarioDirectory,
     tc_impact_ref_tot = gdf_build_ref[THERM_COMFORT_IMPACT_ABS].sum()
     tc_alt_tot = gdf_build_alt[THERM_COMFORT_IMPACT_ABS].divide(gdf_build_alt[THERM_COMFORT_IMPACT_REL]).sum()
     tc_impact_alt_tot = gdf_build_alt[THERM_COMFORT_IMPACT_ABS].sum()
-    diff_tc_rel = tc_impact_alt_tot / tc_alt_tot - tc_impact_ref_tot / tc_ref_tot 
+    diff_tc_rel = tc_impact_alt_tot / tc_alt_tot - tc_impact_ref_tot / tc_ref_tot
     diff_tc_impact = tc_impact_alt_tot - tc_impact_ref_tot
     
     # Write global results into a file
@@ -709,11 +709,13 @@ def compareScenarios(refScenarioDirectory,
     
     if change == "weather" or change == "park composition":
         # Calculate the building energy and comfort differences
-        list_var = [ENERGY_IMPACT_ABS, ENERGY_IMPACT_REL, 
-                    THERM_COMFORT_IMPACT_ABS, THERM_COMFORT_IMPACT_REL]
-        diff_build = gdf_build_alt[list_var].subtract(gdf_build_ref[list_var])
+        list_var_abs = [ENERGY_IMPACT_ABS, THERM_COMFORT_IMPACT_ABS]
+        list_var_rel = [ENERGY_IMPACT_REL, THERM_COMFORT_IMPACT_REL]
+        diff_build = pd.DataFrame(columns = list_var_abs + list_var_rel)
+        diff_build[list_var_abs] = gdf_build_alt[list_var_abs].subtract(gdf_build_ref[list_var_abs])
+        diff_build[list_var_rel] = gdf_build_alt[list_var_rel].subtract(gdf_build_ref[list_var_rel]) * 100
         diff_build_extremums = {var: (diff_build[var].min(), diff_build[var].max())\
-                                for var in list_var}
+                                for var in diff_build.columns}
         diff_build_path = finalDirectory + os.sep + BUILD_INDEP_VAR + ".geojson"
         gpd.GeoDataFrame(pd.concat([diff_build, gdf_build_ref.geometry], axis = 1))\
             .to_file(diff_build_path,

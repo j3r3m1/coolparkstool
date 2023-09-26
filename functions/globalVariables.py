@@ -296,7 +296,7 @@ BASIC_COOLING = -0.11
 
 # Dates used for calculation
 START_DATE = "01/06"
-END_DATE = "20/06"
+END_DATE = "30/09"
 
 # Generic names for meteorological variables
 WDIR = "wdir"
@@ -373,14 +373,10 @@ BUILD_COMFORT_PATH = os.path.join(Path(os.path.dirname(os.path.abspath(__file__)
 #############################################################################
 #################### POSTPROCESSING INFORMATIONS ############################
 #############################################################################
-ENERGY_IMPACT_ABS = "ENERGY_IMPACT_ABS"
-ENERGY_IMPACT_REL = "ENERGY_IMPACT_REL"
-THERM_COMFORT_IMPACT_ABS = "THERM_COMFORT_IMPACT_ABS"
-THERM_COMFORT_IMPACT_REL = "THERM_COMFORT_IMPACT_REL"
-BUILDING_LEGEND = pd.Series({ENERGY_IMPACT_ABS: "",
-                             ENERGY_IMPACT_REL: "",
-                             THERM_COMFORT_IMPACT_ABS: "",
-                             THERM_COMFORT_IMPACT_REL: ""})
+BUILDING_LEGEND = pd.Series({ENERGY_IMPACT_ABS: "Absolute energy impact (Alt - Ref) (kWh/m²/an)",
+                             ENERGY_IMPACT_REL: "Relative energy impact ((Alt - Ref) / sans parc) (%)",
+                             THERM_COMFORT_IMPACT_ABS: "Absolute thermal discomfort impact (Alt - Ref) (°C.h discomfort)",
+                             THERM_COMFORT_IMPACT_REL: "Relative thermal discomfort impact ((Alt - Ref) / sans parc) (%)"})
 LIST_OF_CHANGES = pd.Series(['park composition', 'urban morphology', 'weather'])
 DEFAULT_OPACITY = 0.75
 NB_ISOVALUES = 9
