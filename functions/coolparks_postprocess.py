@@ -295,7 +295,7 @@ def createVectorStyleAndIntervals(loadedVector,
     myRangeList.append(myRange_i)
     
     
-    # For intervals being lower than the zeroValue
+    # For intervals being higher than the zeroValue
     nb_interval_above_deci = ((valueMax) - (valueZero + interval_size / 2)) / interval_size
     nb_interval_above = np.trunc(nb_interval_above_deci)
     if nb_interval_above < nb_interval_above_deci:
@@ -306,8 +306,8 @@ def createVectorStyleAndIntervals(loadedVector,
         
         myLabel_i = f'[{myMin}, {myMax}['
         myColour_i = QColor(255, 
-                            255 - int((i + 1) * 255 / nb_interval_below), 
-                            255 - int((i + 1) * 255 / nb_interval_below))
+                            255 - int((i + 1) * 255 / nb_interval_above), 
+                            255 - int((i + 1) * 255 / nb_interval_above))
         mySymbol_i = QgsSymbol.defaultSymbol(loadedVector.geometryType())
         mySymbol_i.setColor(myColour_i)
         mySymbol_i.setOpacity(opacity)

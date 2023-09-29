@@ -220,7 +220,7 @@ def calc_morpho_t_effect(df_indic, ws_norm, day_hour):
                             value_max = COOLING_FACTORS[day_hour].loc["max","ws"])
     
     # Limit the values of the geospatial indicators to the range used for this indicator during the training phase
-    df_indic_lim = limit_geoindic(df_indic)
+    df_indic_lim = limit_geoindic(df_indic, TRANSPORT_EXTREMUM_VAL)
     
     # Test whether the formula type has a wind speed multiplicator
     if COEF_DT_MORPHO[day_hour].loc[WIND_FACTOR_NAME, "value"] == 0:
@@ -260,7 +260,7 @@ def calc_morpho_d_effect(df_indic, ws_norm, day_hour):
                             value_max = COOLING_FACTORS[day_hour].loc["max","ws"])
     
     # Limit the values of the geospatial indicators to the range used for this indicator during the training phase
-    df_indic_lim = limit_geoindic(df_indic)
+    df_indic_lim = limit_geoindic(df_indic, TRANSPORT_EXTREMUM_VAL)
     
     # Test whether the formula type has a wind speed multiplicator
     if COEF_D_MORPHO[day_hour].loc[WIND_FACTOR_NAME, "value"] == 0:
@@ -330,10 +330,10 @@ def calc_park_effect(df_indic, tair, ws_norm, dpv_norm, day_hour):
     
     return T_park
 
-def limit_geoindic(df_indic):
-    for ind in df_indic.columns[df_indic.columns.isin(TRANSPORT_MAX_VAL.index)]:
-        df_indic.loc[df_indic[df_indic[ind] > TRANSPORT_MAX_VAL.loc[ind]].index, ind] = TRANSPORT_MAX_VAL.loc[ind]
-        df_indic.loc[df_indic[df_indic[ind] < TRANSPORT_MIN_VAL.loc[ind]].index, ind] = TRANSPORT_MIN_VAL.loc[ind]
+def limit_geoindic(df_indic, limits):
+    for ind in df_indic.columns[df_indic.columns.isin(limits.index)]:
+        df_indic.loc[df_indic[df_indic[ind] > limits.loc[ind, "MAX"]].index, ind] = limits.loc[ind, "MAX"]
+        df_indic.loc[df_indic[df_indic[ind] < limits.loc[ind, "MIN"]].index, ind] = limits.loc[ind, "MIN"]
     
     return df_indic
 
@@ -460,12 +460,12 @@ def calc_build_impact(df_indic, deltaT_cols):
     df_comf_with = build_impact_formula(df_indic = df_indic, variable = "comfort")
     
     # Calculates the absolute impact of the park
-    df_impacts[ENERGY_IMPACT_ABS] = df_NRJ_without.subtract(df_NRJ_with)
-    df_impacts[THERM_COMFORT_IMPACT_ABS] = df_comf_without.subtract(df_comf_with)
+    df_impacts[ENERGY_IMPACT_ABS] = df_NRJ_with.subtract(df_NRJ_without)
+    df_impacts[THERM_COMFORT_IMPACT_ABS] = df_comf_with.subtract(df_comf_without)
     
     # Calculates the relative impact of the park
-    df_impacts[ENERGY_IMPACT_REL] = df_impacts[ENERGY_IMPACT_ABS].divide(df_NRJ_with)
-    df_impacts[THERM_COMFORT_IMPACT_REL] = df_impacts[THERM_COMFORT_IMPACT_ABS].divide(df_comf_with)
+    df_impacts[ENERGY_IMPACT_REL] = df_impacts[ENERGY_IMPACT_ABS].divide(df_NRJ_without)
+    df_impacts[THERM_COMFORT_IMPACT_REL] = df_impacts[THERM_COMFORT_IMPACT_ABS].divide(df_comf_without)
        
     return df_impacts
 
@@ -499,6 +499,10 @@ def build_impact_formula(df_indic, variable):
         path_to_file = BUILD_ENERGY_PATH
     elif variable == "comfort":
         path_to_file = BUILD_COMFORT_PATH
+    
+    # Limit the values of the geospatial indicators to the range used for 
+    # the indicators during the training phase
+    df_indic = limit_geoindic(df_indic, BUILD_EXTREMUM_VAL)
     
     # For each combination of building type
     for gt_c, ot_c, bc_c in all_combi:

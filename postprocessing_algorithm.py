@@ -129,6 +129,17 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(f'The alternative scenario does not contain any results')
         if refScenarioDirectory == altScenarioDirectory:
             raise QgsProcessingException(f'You are proposing to compare the same scenarios...')
+        if changes_string == "buildings characteristics":
+            build_ref = gpd.read_file(Path(altScenarioDirectory).parent.parent\
+                                     .joinpath(Path(os.path.join(OUTPUT_PREPROCESSOR_FOLDER,
+                                                                 OUTPUT_BUILD_INDIC + ".geojson"))))
+            build_alt = gpd.read_file(Path(refScenarioDirectory).parent.parent\
+                                     .joinpath(Path(os.path.join(OUTPUT_PREPROCESSOR_FOLDER,
+                                                                 OUTPUT_BUILD_INDIC + ".geojson"))))
+            test_geom = (build_ref.geom_almost_equals(build_alt).sum() == build_ref[ID_FIELD_BUILD].count())
+            test_height = ((build_ref[HEIGHT_FIELD] == build_alt[HEIGHT_FIELD]).sum() == build_ref[ID_FIELD_BUILD].count())
+            if not test_geom or not test_height:
+                raise QgsProcessingException(f'You have specified that the change between scenario was "buildings characteristics". Buildings location and height should be the same in reference and alternative scenarios')
         if changes_string == "weather":
             if (Path(refScenarioDirectory).parent != Path(altScenarioDirectory).parent):
                 raise QgsProcessingException(f'The alternative and reference weather should be saved in the same scenario folder')
@@ -182,6 +193,7 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
                                                   change = changes_string,
                                                   outputDirectory = outputDirectory)
         
+
         # Use the directory name used for the scenario comparison as a 
         # group in the map layer where to load the results
         group_name = finalDirectory.split(os.sep)[-1]
@@ -198,6 +210,11 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
         T_min_value = 0
         T_max_value = 0
         for tp in [DAY_TIME, NIGHT_TIME]:
+            # In case only building charac have been changed, no differences of air temp
+            # between ref and alt, thus just show the effect of the park on its surroundings
+            if changes_string == "buildings characteristics":
+                diff_deltaT_path[tp] = refScenarioDirectory + os.sep + OUTPUT_DT + "_" + str(tp) + "h"
+            
             if diff_deltaT_path[tp]:  
                 layer_stat = processing.run("native:rasterlayerstatistics", 
                                             {'INPUT':diff_deltaT_path[tp],
@@ -245,9 +262,13 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
                                 'FIELD_NAME_MAX':'ELEV_MAX',
                                 'OUTPUT': diff_deltaT_path[tp] + ".geojson"})   
                 
+                if changes_string == "buildings characteristics":
+                    layername = f"Cooling (ref) at {tp}:00 (°C)"
+                else:
+                    layername = f"Cooling (alt - ref) at {tp}:00 (°C)"
                 # Load the vector layer with a given style
                 loadCoolParksVector(filepath = diff_deltaT_path[tp] + ".geojson",
-                                    layername = f"Cooling (alt - ref) at {tp}:00 (°C)",
+                                    layername = layername,
                                     variable = None,
                                     subgroup = new_group,
                                     vector_min = deltaT_min_value,
@@ -315,28 +336,24 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
                                     valueZero = 0,
                                     opacity = 1)
         
-        print("test")
-        
         # Return the output file names
         return {self.OUTPUT_DIRECTORY: finalDirectory,
                 f'A.1. Average air temperature modification at {DAY_TIME}:00 in the city due to the park in '+ \
                 f'the reference scenario': dict_deltaT_glob[DAY_TIME][REF_SCEN] + '°C',
                 f'A.2. Average air temperature modification at {DAY_TIME}:00 in the city due to the park in'+\
                 f'the alternative scenario': dict_deltaT_glob[DAY_TIME][ALT_SCEN] + '°C',
-                f'A.3. Average air temperature modification at {DAY_TIME}:00 in the city due to the park in '+\
-                f'the alternative scenario compared to the reference one': dict_deltaT_glob[DAY_TIME][DIFF_SCEN] + '°C   ',
                 f'B.1. Average air temperature modification at {NIGHT_TIME}:00 in the city due to the park in '+ \
                 f'the reference scenario': dict_deltaT_glob[NIGHT_TIME][REF_SCEN] + '°C',
                 f'B.2. Average air temperature modification at {NIGHT_TIME}:00 in the city due to the park in '+ \
                 f'the alternative scenario': dict_deltaT_glob[NIGHT_TIME][ALT_SCEN] + '°C',
-                f'B.3. Average air temperature modification at {NIGHT_TIME}:00 in the city due to the park in '+ \
-                f'the alternative scenario compared to the reference one': dict_deltaT_glob[NIGHT_TIME][DIFF_SCEN] + '°C   ',
                 f'C.1. Total building energy need saved thanks to the park in '+ \
                 f'the reference scenario': f'{dict_build_glob["ENERGY_IMPACT_REF"]}',
                 f'C.2. Total building energy need saved thanks to the park in '+ \
                 f'the alternative scenario': f'{dict_build_glob["ENERGY_IMPACT_ALT"]}',
-                f'C.3. Total building energy need saved thanks to the park in '+ \
-                f'the alternative scenario compared to the reference one': f'{dict_build_glob["ENERGY_IMPACT_DIFF"]}'
+                f'D.1. Average degree-hour of thermal discomfort in buildings saved thanks to the park in '+ \
+                f'the reference scenario': f'{dict_build_glob["THERM_COMFORT_REF"]}',
+                f'D.2. Average degree-hour of thermal discomfort in buildings saved thanks to the park in '+ \
+                f'the alternative scenario': f'{dict_build_glob["ENERGY_IMPACT_ALT"]}'
                 }
     
     def name(self):

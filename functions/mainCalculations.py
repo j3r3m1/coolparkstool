@@ -566,7 +566,7 @@ def calcParkInfluence(weatherFilePath,
         array_dt_final = None
         
         processing.run("gdal:contour_polygon", 
-                       {'INPUT':output_t_path[tp],
+                       {'INPUT':output_dt_path[tp],
                         'BAND':1,
                         'INTERVAL':f'{interval_isovalues_dT}',
                         'CREATE_3D':False,
@@ -575,7 +575,7 @@ def calcParkInfluence(weatherFilePath,
                         'OFFSET':f'{0 + interval_isovalues_dT / 2}',
                         'EXTRA':'','FIELD_NAME_MIN':'ELEV_MIN',
                         'FIELD_NAME_MAX':'ELEV_MAX',
-                        'OUTPUT': output_t_path[tp] + ".geojson"})        
+                        'OUTPUT': output_dt_path[tp] + ".geojson"})        
         
         # Save the weights
         weights.to_csv(f'{final_output_dir + os.sep + WIND_DIR_RATE}_{str(tp)}h.csv')
@@ -633,7 +633,7 @@ def calcBuildingImpact(preprocessOutputPath,
                            
     # Calculates the amplification factor for each building
     deltaT_list = [f'{DELTA_T + str(tp)}h1' for tp in output_dt_path.keys()]
-    df_points[BUILDING_AMPLIF_FACTOR] = df_points[deltaT_list].mean(axis = 1)
+    df_points[BUILDING_AMPLIF_FACTOR] = df_points[deltaT_list].mean(axis = 1) / BASIC_COOLING
     df_points.drop(deltaT_list, axis = 1, inplace = True)
     
     # Calculate the absolute and relative impacts of the park on the buildings
@@ -643,7 +643,7 @@ def calcBuildingImpact(preprocessOutputPath,
     
     # Join the independent variables and impacts of the park on the buildings 
     # to the building geometry
-    gdf_build = gpd.read_file(buildingPath)[[ID_FIELD_BUILD, "geometry"]].set_index(ID_FIELD_BUILD)
+    gdf_build = gpd.read_file(buildingPath)[[ID_FIELD_BUILD, "geometry", HEIGHT_FIELD]].set_index(ID_FIELD_BUILD)
     gdf_build = gdf_build.join(df_impacts)
     
     # Save the results in a vector layer
@@ -676,48 +676,55 @@ def compareScenarios(refScenarioDirectory,
     BUILD_alt = altScenarioDirectory + os.sep + BUILD_INDEP_VAR + ".geojson"
     gdf_build_ref = gpd.read_file(BUILD_ref)
     gdf_build_alt = gpd.read_file(BUILD_alt)
-            
-    # Calculate the global energy impact difference
-    nrj_ref_tot = gdf_build_ref[ENERGY_IMPACT_ABS].divide(gdf_build_ref[ENERGY_IMPACT_REL]).sum()
-    nrj_impact_ref_tot = gdf_build_ref[ENERGY_IMPACT_ABS].sum()
-    nrj_alt_tot = gdf_build_alt[ENERGY_IMPACT_ABS].divide(gdf_build_alt[ENERGY_IMPACT_REL]).sum()
-    nrj_impact_alt_tot = gdf_build_alt[ENERGY_IMPACT_ABS].sum()
-    diff_nrj_rel = nrj_impact_alt_tot / nrj_alt_tot - nrj_impact_ref_tot / nrj_ref_tot
-    diff_nrj_impact = nrj_impact_alt_tot - nrj_impact_ref_tot
     
-    # Calculate the global thermal impact difference
-    tc_ref_tot = gdf_build_ref[THERM_COMFORT_IMPACT_ABS].divide(gdf_build_ref[THERM_COMFORT_IMPACT_REL]).sum()
-    tc_impact_ref_tot = gdf_build_ref[THERM_COMFORT_IMPACT_ABS].sum()
-    tc_alt_tot = gdf_build_alt[THERM_COMFORT_IMPACT_ABS].divide(gdf_build_alt[THERM_COMFORT_IMPACT_REL]).sum()
-    tc_impact_alt_tot = gdf_build_alt[THERM_COMFORT_IMPACT_ABS].sum()
-    diff_tc_rel = tc_impact_alt_tot / tc_alt_tot - tc_impact_ref_tot / tc_ref_tot
-    diff_tc_impact = tc_impact_alt_tot - tc_impact_ref_tot
+    # Add and calculate a floor area column for each building
+    gdf_build_ref[FLOOR_AREA] = gdf_build_ref.area * np.trunc(gdf_build_ref[HEIGHT_FIELD] / BUILDING_DEFAULT_FLOOR_HEIGHT)
+    gdf_build_alt[FLOOR_AREA] = gdf_build_alt.area * np.trunc(gdf_build_alt[HEIGHT_FIELD] / BUILDING_DEFAULT_FLOOR_HEIGHT)
+    
+    # Calculate the building energy and comfort differences
+    list_var_abs = [ENERGY_IMPACT_ABS, THERM_COMFORT_IMPACT_ABS]
+    list_var_rel = [ENERGY_IMPACT_REL, THERM_COMFORT_IMPACT_REL]
+    diff_build = pd.DataFrame(columns = list_var_abs + list_var_rel)
+    tempo_build_nrj_ref = gdf_build_ref[ENERGY_IMPACT_ABS].divide(gdf_build_ref[ENERGY_IMPACT_REL])
+    tempo_build_tc_ref = gdf_build_ref[THERM_COMFORT_IMPACT_ABS].divide(gdf_build_ref[THERM_COMFORT_IMPACT_REL])
+    diff_build[list_var_abs] = gdf_build_alt[list_var_abs].subtract(gdf_build_ref[list_var_abs])
+    diff_build[ENERGY_IMPACT_REL] = diff_build[ENERGY_IMPACT_ABS].divide(tempo_build_nrj_ref) * 100
+    diff_build[THERM_COMFORT_IMPACT_REL] = diff_build[THERM_COMFORT_IMPACT_ABS].divide(tempo_build_tc_ref) * 100
+    diff_build_extremums = {var: (diff_build[var].min(), diff_build[var].max())\
+                            for var in diff_build.columns}
+    
+    
+    # Calculate the global energy impact for ref and alt (the reference for % is without park)
+    nrj_ref_tot = (gdf_build_ref[ENERGY_IMPACT_ABS].divide(gdf_build_ref[ENERGY_IMPACT_REL])\
+                   .mul(gdf_build_ref[FLOOR_AREA])).sum()
+    nrj_impact_ref_tot = (gdf_build_ref[ENERGY_IMPACT_ABS].mul(gdf_build_ref[FLOOR_AREA])).sum()
+    nrj_alt_tot = (gdf_build_alt[ENERGY_IMPACT_ABS].divide(gdf_build_alt[ENERGY_IMPACT_REL])\
+                   .mul(gdf_build_alt[FLOOR_AREA])).sum()
+    nrj_impact_alt_tot = (gdf_build_alt[ENERGY_IMPACT_ABS].mul(gdf_build_alt[FLOOR_AREA])).sum()
+    
+    # Calculate the mean thermal impact weighted by the area of building
+    tc_ref_tot = (gdf_build_ref[THERM_COMFORT_IMPACT_ABS].divide(gdf_build_ref[THERM_COMFORT_IMPACT_REL])\
+                  .mul(gdf_build_ref[FLOOR_AREA])).sum()/(gdf_build_ref[FLOOR_AREA].sum())
+    tc_impact_ref_tot = (gdf_build_ref[THERM_COMFORT_IMPACT_ABS]\
+                  .mul(gdf_build_ref[FLOOR_AREA])).sum()/(gdf_build_ref[FLOOR_AREA].sum())
+    tc_alt_tot = (gdf_build_alt[THERM_COMFORT_IMPACT_ABS].divide(gdf_build_alt[THERM_COMFORT_IMPACT_REL])\
+                  .mul(gdf_build_alt[FLOOR_AREA])).sum()/(gdf_build_alt[FLOOR_AREA].sum())
+    tc_impact_alt_tot = (gdf_build_alt[THERM_COMFORT_IMPACT_ABS]\
+                  .mul(gdf_build_alt[FLOOR_AREA])).sum()/(gdf_build_alt[FLOOR_AREA].sum())
     
     # Write global results into a file
-    dict_build_glob = {"ENERGY_IMPACT_DIFF" : f'{round_to(diff_nrj_impact, NB_SIGN_DIGITS)}kWh/m²/an'+\
-                                               f'({round_to(diff_nrj_rel * 100, NB_SIGN_DIGITS)}%)',
-                       "THERM_COMFORT_DIFF" : f'{round_to(diff_tc_impact, NB_SIGN_DIGITS)}kWh/m²/an'+\
-                                               f'({round_to(diff_tc_rel * 100, NB_SIGN_DIGITS)}%)',
-                       "ENERGY_IMPACT_REF" : f'{round_to(gdf_build_ref[ENERGY_IMPACT_ABS].sum(), NB_SIGN_DIGITS)}kWh/m²/an'+\
-                                               f'({round_to(gdf_build_ref[ENERGY_IMPACT_REL].sum() * 100, NB_SIGN_DIGITS)}%)',
-                       "THERM_COMFORT_REF" : f'{round_to(gdf_build_ref[THERM_COMFORT_IMPACT_ABS].sum(), NB_SIGN_DIGITS)}kWh/m²/an'+\
-                                               f'({round_to(gdf_build_ref[THERM_COMFORT_IMPACT_REL].sum() * 100, NB_SIGN_DIGITS)}%)',
-                       "ENERGY_IMPACT_ALT" : f'{round_to(gdf_build_alt[ENERGY_IMPACT_ABS].sum(), NB_SIGN_DIGITS)}kWh/m²/an'+\
-                                               f'({round_to(gdf_build_alt[ENERGY_IMPACT_REL].sum() * 100, NB_SIGN_DIGITS)}%)',
-                       "THERM_COMFORT_ALT" : f'{round_to(gdf_build_alt[THERM_COMFORT_IMPACT_ABS].sum(), NB_SIGN_DIGITS)}kWh/m²/an'+\
-                                               f'({round_to(gdf_build_alt[THERM_COMFORT_IMPACT_REL].sum() * 100, NB_SIGN_DIGITS)}%)'}
+    dict_build_glob = {"ENERGY_IMPACT_REF" : f'{round_to(-nrj_impact_ref_tot, NB_SIGN_DIGITS)}kWh/year '+\
+                                               f'({round_to(-nrj_impact_ref_tot / nrj_ref_tot * 100, NB_SIGN_DIGITS)}%)',
+                       "THERM_COMFORT_REF" : f'{round_to(-tc_impact_ref_tot, NB_SIGN_DIGITS)}°C.h/year '+\
+                                               f'({round_to(-tc_impact_ref_tot / tc_ref_tot * 100, NB_SIGN_DIGITS)}%)',
+                       "ENERGY_IMPACT_ALT" : f'{round_to(-nrj_impact_alt_tot, NB_SIGN_DIGITS)}kWh/year '+\
+                                               f'({round_to(-nrj_impact_alt_tot / nrj_alt_tot * 100, NB_SIGN_DIGITS)}%)',
+                       "THERM_COMFORT_ALT" : f'{round_to(-tc_impact_alt_tot, NB_SIGN_DIGITS)}°C.h/year '+\
+                                               f'({round_to(-tc_impact_alt_tot / tc_alt_tot * 100, NB_SIGN_DIGITS)}%)'}
     pd.Series(dict_build_glob)\
         .to_csv(finalDirectory + os.sep + "Global_building_effect.csv")
     
-    if change == "weather" or change == "park composition":
-        # Calculate the building energy and comfort differences
-        list_var_abs = [ENERGY_IMPACT_ABS, THERM_COMFORT_IMPACT_ABS]
-        list_var_rel = [ENERGY_IMPACT_REL, THERM_COMFORT_IMPACT_REL]
-        diff_build = pd.DataFrame(columns = list_var_abs + list_var_rel)
-        diff_build[list_var_abs] = gdf_build_alt[list_var_abs].subtract(gdf_build_ref[list_var_abs])
-        diff_build[list_var_rel] = gdf_build_alt[list_var_rel].subtract(gdf_build_ref[list_var_rel]) * 100
-        diff_build_extremums = {var: (diff_build[var].min(), diff_build[var].max())\
-                                for var in diff_build.columns}
+    if change == "weather" or change == "park composition" or change == 'buildings characteristics':
         diff_build_path = finalDirectory + os.sep + BUILD_INDEP_VAR + ".geojson"
         gpd.GeoDataFrame(pd.concat([diff_build, gdf_build_ref.geometry], axis = 1))\
             .to_file(diff_build_path,
@@ -731,62 +738,30 @@ def compareScenarios(refScenarioDirectory,
     diff_T_path = {}
     dict_deltaT_glob = {}
     for tp in [DAY_TIME, NIGHT_TIME]:
-        deltaT_ref_path = refScenarioDirectory + os.sep + OUTPUT_DT + "_" + str(tp) + "h"
-        deltaT_alt_path = altScenarioDirectory + os.sep + OUTPUT_DT + "_" + str(tp) + "h"   
-        T_ref_path = refScenarioDirectory + os.sep + OUTPUT_T + "_" + str(tp) + "h" 
-        T_alt_path = altScenarioDirectory + os.sep + OUTPUT_T + "_" + str(tp) + "h"
-        
-        # Calculate the deltaT difference
-        diff_deltaT_path[tp] = finalDirectory + os.sep + OUTPUT_DT + "_" + str(tp) + "h"
-        diff_T_path[tp] = None
-        processing.run("gdal:rastercalculator", 
-                       {'INPUT_A':deltaT_alt_path,
-                        'BAND_A':1,
-                        'INPUT_B':deltaT_ref_path,
-                        'BAND_B':1,
-                        'INPUT_C':None,
-                        'BAND_C':None,
-                        'INPUT_D':None,
-                        'BAND_D':None,
-                        'INPUT_E':None,
-                        'BAND_E':None,
-                        'INPUT_F':None,
-                        'BAND_F':None,
-                        'FORMULA':'A -B',
-                        'NO_DATA':None,
-                        'RTYPE':5,
-                        'OPTIONS':'',
-                        'EXTRA':'',
-                        'OUTPUT': diff_deltaT_path[tp]})
-        
-        # Calculate the mean of each deltaT scenario + the scenario difference
-        raster_dt_ref = gdal.Open(f'{deltaT_ref_path}')
-        raster_dt_alt = gdal.Open(f'{deltaT_alt_path}')
-        raster_dt_diff = gdal.Open(f'{diff_deltaT_path[tp]}')
-        dt_array_ref = raster_dt_ref.ReadAsArray()
-        dt_array_alt = raster_dt_alt.ReadAsArray()
-        dt_array_diff = raster_dt_diff.ReadAsArray()
-        val_ref = round_to(np.nanmean(dt_array_ref[(dt_array_ref>-9999) * (dt_array_ref<9999)] ), NB_SIGN_DIGITS)
-        val_alt = round_to(np.nanmean(dt_array_alt[(dt_array_alt>-9999) * (dt_array_alt<9999)]), NB_SIGN_DIGITS)
-        val_diff = round_to(np.nanmean(dt_array_diff[(dt_array_diff>-9999) * (dt_array_diff<9999)]), NB_SIGN_DIGITS)
-        
-        dict_deltaT_glob[tp] = {REF_SCEN: str(val_ref),
-                                ALT_SCEN: str(val_alt),
-                                DIFF_SCEN: str(val_diff)}
-                                     
-        # Release memory to avoid error due to gdal
-        raster_dt_ref = None
-        raster_dt_alt = None
-        raster_dt_diff = None    
-            
-        if change == "park_composition":
+        if change == 'buildings characteristics':
             diff_deltaT_path[tp] = None
-            diff_T_path[tp] = finalDirectory + os.sep + OUTPUT_T + "_" + str(tp) + "h"
-            # Calculate the air temperature difference
+            diff_T_path[tp] = None
+            # Calculate the mean of each deltaT scenario + the scenario difference
+            deltaT_ref_path = refScenarioDirectory + os.sep + OUTPUT_DT + "_" + str(tp) + "h"
+            raster_dt_ref = gdal.Open(f'{deltaT_ref_path}')
+            dt_array_ref = raster_dt_ref.ReadAsArray()
+            val_ref = round_to(np.nanmean(dt_array_ref[(dt_array_ref>-9999) * (dt_array_ref<9999)] ), NB_SIGN_DIGITS)
+            dict_deltaT_glob[tp] = {REF_SCEN: str(val_ref),
+                                    ALT_SCEN: str(val_ref),
+                                    DIFF_SCEN: str(0)}
+        else:
+            deltaT_ref_path = refScenarioDirectory + os.sep + OUTPUT_DT + "_" + str(tp) + "h"
+            deltaT_alt_path = altScenarioDirectory + os.sep + OUTPUT_DT + "_" + str(tp) + "h"   
+            T_ref_path = refScenarioDirectory + os.sep + OUTPUT_T + "_" + str(tp) + "h" 
+            T_alt_path = altScenarioDirectory + os.sep + OUTPUT_T + "_" + str(tp) + "h"
+            
+            # Calculate the deltaT difference
+            diff_deltaT_path[tp] = finalDirectory + os.sep + OUTPUT_DT + "_" + str(tp) + "h"
+            diff_T_path[tp] = None
             processing.run("gdal:rastercalculator", 
-                           {'INPUT_A':T_alt_path,
+                           {'INPUT_A':deltaT_alt_path,
                             'BAND_A':1,
-                            'INPUT_B':T_ref_path,
+                            'INPUT_B':deltaT_ref_path,
                             'BAND_B':1,
                             'INPUT_C':None,
                             'BAND_C':None,
@@ -801,7 +776,51 @@ def compareScenarios(refScenarioDirectory,
                             'RTYPE':5,
                             'OPTIONS':'',
                             'EXTRA':'',
-                            'OUTPUT': diff_T_path[tp]})
+                            'OUTPUT': diff_deltaT_path[tp]})
+            
+            # Calculate the mean of each deltaT scenario + the scenario difference
+            raster_dt_ref = gdal.Open(f'{deltaT_ref_path}')
+            raster_dt_alt = gdal.Open(f'{deltaT_alt_path}')
+            raster_dt_diff = gdal.Open(f'{diff_deltaT_path[tp]}')
+            dt_array_ref = raster_dt_ref.ReadAsArray()
+            dt_array_alt = raster_dt_alt.ReadAsArray()
+            dt_array_diff = raster_dt_diff.ReadAsArray()
+            val_ref = round_to(np.nanmean(dt_array_ref[(dt_array_ref>-9999) * (dt_array_ref<9999)] ), NB_SIGN_DIGITS)
+            val_alt = round_to(np.nanmean(dt_array_alt[(dt_array_alt>-9999) * (dt_array_alt<9999)]), NB_SIGN_DIGITS)
+            val_diff = round_to(np.nanmean(dt_array_diff[(dt_array_diff>-9999) * (dt_array_diff<9999)]), NB_SIGN_DIGITS)
+            
+            dict_deltaT_glob[tp] = {REF_SCEN: str(val_ref),
+                                    ALT_SCEN: str(val_alt),
+                                    DIFF_SCEN: str(val_diff)}
+                                         
+            # Release memory to avoid error due to gdal
+            raster_dt_ref = None
+            raster_dt_alt = None
+            raster_dt_diff = None    
+                
+            if change == "park_composition":
+                diff_deltaT_path[tp] = None
+                diff_T_path[tp] = finalDirectory + os.sep + OUTPUT_T + "_" + str(tp) + "h"
+                # Calculate the air temperature difference
+                processing.run("gdal:rastercalculator", 
+                               {'INPUT_A':T_alt_path,
+                                'BAND_A':1,
+                                'INPUT_B':T_ref_path,
+                                'BAND_B':1,
+                                'INPUT_C':None,
+                                'BAND_C':None,
+                                'INPUT_D':None,
+                                'BAND_D':None,
+                                'INPUT_E':None,
+                                'BAND_E':None,
+                                'INPUT_F':None,
+                                'BAND_F':None,
+                                'FORMULA':'A -B',
+                                'NO_DATA':None,
+                                'RTYPE':5,
+                                'OPTIONS':'',
+                                'EXTRA':'',
+                                'OUTPUT': diff_T_path[tp]})
             
     return finalDirectory, dict_build_glob, diff_build_path, diff_deltaT_path,\
         diff_T_path, diff_build_extremums, dict_deltaT_glob

@@ -92,6 +92,7 @@ OUTPUT_GRID = "OUTPUT_GRID"
 # Field names
 GEOM_FIELD = "THE_GEOM"
 HEIGHT_FIELD = "HEIGHT_ROOF"
+FLOOR_AREA = "FLOOR_AREA"
 TYPE = "TYPE"
 ID_FIELD_BUILD = "ID_BUILD"
 ID_FIELD_BLOCK = "ID_BLOCK"
@@ -195,6 +196,7 @@ BUILDING_DEFAULT_HEIGHT = 9
 BUILDING_DEFAULT_WINDOWS_WALL_RATIO = 0.2
 BUILDING_DEFAULT_SHUTTER = 1
 BUILDING_DEFAULT_NAT_VENTIL = 0.6
+BUILDING_DEFAULT_FLOOR_HEIGHT = 3
 
 # Building properties per building age and building size class (cf. index of BUILDING_SIZE_CLASS)
 BUILDING_PROPERTIES = {1: pd.DataFrame({"Name": ["Construit avant 1915",
@@ -356,26 +358,39 @@ COEF_D_MORPHO = {DAY_TIME: pd.read_csv(COOLING_TRANSPORT_PATH + os.sep + f"d_mor
 
 # Maximum and minimum values achievable for the spatial indicators (due to training data calibration)
 TRAINING_TRANSPORT_PATH = os.path.join(Path(os.path.dirname(os.path.abspath(__file__))).parents[0], "Resources", "cooling_transport_results")
-TRANSPORT_MAX_VAL = pd.read_csv(TRAINING_TRANSPORT_PATH + os.sep + f"training_data_{DAY_TIME}h.csv",
-                                header = 0,
-                                index_col = 0).max()
-TRANSPORT_MIN_VAL = pd.read_csv(TRAINING_TRANSPORT_PATH + os.sep + f"training_data_{DAY_TIME}h.csv",
-                                header = 0,
-                                index_col = 0).min()
+TRANSPORT_EXTREMUM_VAL = pd.concat([pd.read_csv(TRAINING_TRANSPORT_PATH + os.sep + f"training_data_{DAY_TIME}h.csv",
+                                                header = 0,
+                                                index_col = 0).max().rename("MAX"),
+                                    pd.read_csv(TRAINING_TRANSPORT_PATH + os.sep + f"training_data_{DAY_TIME}h.csv",
+                                                header = 0,
+                                                index_col = 0).min().rename("MIN")],
+                                   axis = 1)
 
 # Empirical model coefficients for building energy and building thermal comfort
 BUILD_ENERGY_PATH = os.path.join(Path(os.path.dirname(os.path.abspath(__file__))).parents[0], "Resources", "empirical_coefficients", "building_energy")
 BUILD_COMFORT_PATH = os.path.join(Path(os.path.dirname(os.path.abspath(__file__))).parents[0], "Resources", "empirical_coefficients", "building_comfort")
-
+# Min and max achievable for building indicators value
+BUILD_EXTREMUM_VAL = pd.DataFrame({BUILDING_WWR: [20, 80],
+                                   ASPECT_RATIO: [0, 4],
+                                   BUILDING_AMPLIF_FACTOR: [0, 40],
+                                   BUILDING_SHUTTER: [0,1],
+                                   BUILDING_UROOF: [0.1, 3],
+                                   BUILDING_UWALL: [0.12, 2.6],
+                                   BUILDING_USLAB: [0.12, 3.55],
+                                   BUILDING_UWIN: [0.8, 4.8],
+                                   BUILDING_INFILTRATION_RATE: [0.067, 1],
+                                   BUILDING_NATURAL_VENT_RATE: [0.6, 2],
+                                   BUILDING_MECHANICAL_VENT_RATE: [0, 0.6]},
+                                  index = ["MIN", "MAX"]).transpose()
 
 #############################################################################
 #################### POSTPROCESSING INFORMATIONS ############################
 #############################################################################
 BUILDING_LEGEND = pd.Series({ENERGY_IMPACT_ABS: "Absolute energy impact (Alt - Ref) (kWh/m²/an)",
-                             ENERGY_IMPACT_REL: "Relative energy impact ((Alt - Ref) / sans parc) (%)",
+                             ENERGY_IMPACT_REL: "Relative energy impact ((Alt - Ref) / Ref without park) (%)",
                              THERM_COMFORT_IMPACT_ABS: "Absolute thermal discomfort impact (Alt - Ref) (°C.h discomfort)",
-                             THERM_COMFORT_IMPACT_REL: "Relative thermal discomfort impact ((Alt - Ref) / sans parc) (%)"})
-LIST_OF_CHANGES = pd.Series(['park composition', 'urban morphology', 'weather'])
+                             THERM_COMFORT_IMPACT_REL: "Relative thermal discomfort impact ((Alt - Ref) / Ref without park) (%)"})
+LIST_OF_CHANGES = pd.Series(['park composition', 'urban morphology', 'weather', 'buildings characteristics'])
 DEFAULT_OPACITY = 0.75
 NB_ISOVALUES = 9
 NB_SIGN_DIGITS = 2
