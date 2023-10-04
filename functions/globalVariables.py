@@ -383,13 +383,18 @@ BUILD_EXTREMUM_VAL = pd.DataFrame({BUILDING_WWR: [20, 80],
                                    BUILDING_MECHANICAL_VENT_RATE: [0, 0.6]},
                                   index = ["MIN", "MAX"]).transpose()
 
+BUILDING_LEGEND_PROCESS = pd.Series({ENERGY_IMPACT_ABS: "Absolute energy impact (with Park - without park) (kWh/m²/an)",
+                                     ENERGY_IMPACT_REL: "Relative energy impact ((with Park - without park) / without park) (%)",
+                                     THERM_COMFORT_IMPACT_ABS: "Absolute thermal discomfort impact (with Park - without park) (°C.h discomfort)",
+                                     THERM_COMFORT_IMPACT_REL: "Relative thermal discomfort impact ((with Park - without park) / without park) (%)"})
+
 #############################################################################
 #################### POSTPROCESSING INFORMATIONS ############################
 #############################################################################
-BUILDING_LEGEND = pd.Series({ENERGY_IMPACT_ABS: "Absolute energy impact (Alt - Ref) (kWh/m²/an)",
-                             ENERGY_IMPACT_REL: "Relative energy impact ((Alt - Ref) / Ref without park) (%)",
-                             THERM_COMFORT_IMPACT_ABS: "Absolute thermal discomfort impact (Alt - Ref) (°C.h discomfort)",
-                             THERM_COMFORT_IMPACT_REL: "Relative thermal discomfort impact ((Alt - Ref) / Ref without park) (%)"})
+BUILDING_LEGEND_POSTPROCESS = pd.Series({ENERGY_IMPACT_ABS: "Absolute energy impact (Alt - Ref) (kWh/m²/an)",
+                                         ENERGY_IMPACT_REL: "Relative energy impact ((Alt - Ref) / Ref without park) (%)",
+                                         THERM_COMFORT_IMPACT_ABS: "Absolute thermal discomfort impact (Alt - Ref) (°C.h discomfort)",
+                                         THERM_COMFORT_IMPACT_REL: "Relative thermal discomfort impact ((Alt - Ref) / Ref without park) (%)"})
 LIST_OF_CHANGES = pd.Series(['park composition', 'urban morphology', 'weather', 'buildings characteristics'])
 DEFAULT_OPACITY = 0.75
 NB_ISOVALUES = 9

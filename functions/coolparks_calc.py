@@ -464,8 +464,8 @@ def calc_build_impact(df_indic, deltaT_cols):
     df_impacts[THERM_COMFORT_IMPACT_ABS] = df_comf_with.subtract(df_comf_without)
     
     # Calculates the relative impact of the park
-    df_impacts[ENERGY_IMPACT_REL] = df_impacts[ENERGY_IMPACT_ABS].divide(df_NRJ_without)
-    df_impacts[THERM_COMFORT_IMPACT_REL] = df_impacts[THERM_COMFORT_IMPACT_ABS].divide(df_comf_without)
+    df_impacts[ENERGY_IMPACT_REL] = df_impacts[ENERGY_IMPACT_ABS].divide(df_NRJ_without) * 100
+    df_impacts[THERM_COMFORT_IMPACT_REL] = df_impacts[THERM_COMFORT_IMPACT_ABS].divide(df_comf_without) * 100
        
     return df_impacts
 

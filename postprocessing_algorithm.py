@@ -107,7 +107,8 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFolderDestination(
                 self.OUTPUT_DIRECTORY,
-                self.tr('Directory to save the outputs')))
+                self.tr('Directory to save the outputs'),
+                TEMPO_DIRECTORY))
         
 
     def processAlgorithm(self, parameters, context, feedback):
@@ -326,7 +327,7 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
         if diff_build_path:
             for var in diff_build_extremums:
                 loadCoolParksVector(filepath = diff_build_path,
-                                    layername = BUILDING_LEGEND[var],
+                                    layername = BUILDING_LEGEND_POSTPROCESS[var],
                                     variable = var,
                                     subgroup = new_group,
                                     vector_min = diff_build_extremums[var][0],

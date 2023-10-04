@@ -517,14 +517,32 @@ def calcParkInfluence(weatherFilePath,
                         'LAYERS':raster_dt_list,
                         'CELLSIZE':0,'EXTENT':None,'CRS':None,'OUTPUT':output_dt_path[tp]})        
         
-        # # Save the final air temperature as a raster and as a contour
-        # calc_fct.save_raster(array = t_final, 
-        #                      path = output_t_path[tp], 
-        #                      x_count = x_count_t+1,
-        #                      y_count = y_count_t+1,
-        #                      geotransform = geotransform,
-        #                      projection = projection)
-        
+    ######################################################################
+    ################# SAVE RESULTS AS CONTOUR ############################
+    ######################################################################
+    # Calculates DTmin and DTmax over day and night-time to have a unique legend for day and night
+    deltaT_min_value = 0
+    deltaT_max_value = 0
+    for tp in [DAY_TIME, NIGHT_TIME]:
+        # Calculates 
+        raster_dt_final = gdal.Open(f'{output_dt_path[tp]}')
+        array_dt_final = raster_dt_final.ReadAsArray()
+        array_dt_final = array_dt_final[array_dt_final>-9999]
+        dT_min = np.nanmin(array_dt_final)
+        dT_max = np.nanmax(array_dt_final)
+        if dT_min < deltaT_min_value:
+            deltaT_min_value = dT_min
+        if dT_max > deltaT_max_value:
+            deltaT_max_value = dT_max
+        # Release memory to avoid error due to gdal
+        raster_dt_final = None
+        array_dt_final = None
+    interval_isovalues_dT = round_to((deltaT_max_value-deltaT_min_value) / NB_ISOVALUES,
+                                             2)
+            
+    
+    for tp in [DAY_TIME, NIGHT_TIME]:
+        # Save the final air temperature as a contour
         raster_t_final = gdal.Open(f'{output_t_path[tp]}')
         array_t_final = raster_t_final.ReadAsArray()
         array_t_final = array_t_final[array_t_final>-9999]
@@ -535,6 +553,7 @@ def calcParkInfluence(weatherFilePath,
         raster_t_final = None
         array_t_final = None
                 
+        # Save the final air temperature as a contour
         processing.run("gdal:contour_polygon", 
                        {'INPUT':output_t_path[tp],
                         'BAND':1,
@@ -547,24 +566,7 @@ def calcParkInfluence(weatherFilePath,
                         'FIELD_NAME_MAX':'ELEV_MAX',
                         'OUTPUT': output_t_path[tp] + ".geojson"})
         
-        # # Save the final delta air temperature as a raster and as a contour
-        # calc_fct.save_raster(array = dt_final, 
-        #                      path = output_dt_path[tp], 
-        #                      x_count = x_count_dt,
-        #                      y_count = y_count_dt,
-        #                      geotransform = geotransform,
-        #                      projection = projection)
-        
-        raster_dt_final = gdal.Open(f'{output_dt_path[tp]}')
-        array_dt_final = raster_dt_final.ReadAsArray()
-        array_dt_final = array_dt_final[array_dt_final>-9999]
-        interval_isovalues_dT = round_to((np.nanmax(array_dt_final)-np.nanmin(array_dt_final)) / NB_ISOVALUES,
-                                                 2)
-        
-        # Release memory to avoid error due to gdal
-        raster_dt_final = None
-        array_dt_final = None
-        
+        # Save the final delta air temperature as a contour
         processing.run("gdal:contour_polygon", 
                        {'INPUT':output_dt_path[tp],
                         'BAND':1,
@@ -575,12 +577,12 @@ def calcParkInfluence(weatherFilePath,
                         'OFFSET':f'{0 + interval_isovalues_dT / 2}',
                         'EXTRA':'','FIELD_NAME_MIN':'ELEV_MIN',
                         'FIELD_NAME_MAX':'ELEV_MAX',
-                        'OUTPUT': output_dt_path[tp] + ".geojson"})        
+                        'OUTPUT': output_dt_path[tp] + ".geojson"})
         
         # Save the weights
         weights.to_csv(f'{final_output_dir + os.sep + WIND_DIR_RATE}_{str(tp)}h.csv')
         
-    return output_t_path, output_dt_path
+    return output_t_path, output_dt_path, deltaT_min_value, deltaT_max_value
 
 
 def calcBuildingImpact(preprocessOutputPath,
@@ -651,6 +653,8 @@ def calcBuildingImpact(preprocessOutputPath,
     gdf_build.to_file(output_vector,
                       driver = "GeoJSON")
     
+    return gdf_build, output_vector
+    
 def compareScenarios(refScenarioDirectory, 
                      altScenarioDirectory,
                      change,
@@ -685,8 +689,8 @@ def compareScenarios(refScenarioDirectory,
     list_var_abs = [ENERGY_IMPACT_ABS, THERM_COMFORT_IMPACT_ABS]
     list_var_rel = [ENERGY_IMPACT_REL, THERM_COMFORT_IMPACT_REL]
     diff_build = pd.DataFrame(columns = list_var_abs + list_var_rel)
-    tempo_build_nrj_ref = gdf_build_ref[ENERGY_IMPACT_ABS].divide(gdf_build_ref[ENERGY_IMPACT_REL])
-    tempo_build_tc_ref = gdf_build_ref[THERM_COMFORT_IMPACT_ABS].divide(gdf_build_ref[THERM_COMFORT_IMPACT_REL])
+    tempo_build_nrj_ref = gdf_build_ref[ENERGY_IMPACT_ABS].divide(gdf_build_ref[ENERGY_IMPACT_REL]/100)
+    tempo_build_tc_ref = gdf_build_ref[THERM_COMFORT_IMPACT_ABS].divide(gdf_build_ref[THERM_COMFORT_IMPACT_REL]/100)
     diff_build[list_var_abs] = gdf_build_alt[list_var_abs].subtract(gdf_build_ref[list_var_abs])
     diff_build[ENERGY_IMPACT_REL] = diff_build[ENERGY_IMPACT_ABS].divide(tempo_build_nrj_ref) * 100
     diff_build[THERM_COMFORT_IMPACT_REL] = diff_build[THERM_COMFORT_IMPACT_ABS].divide(tempo_build_tc_ref) * 100
@@ -695,19 +699,19 @@ def compareScenarios(refScenarioDirectory,
     
     
     # Calculate the global energy impact for ref and alt (the reference for % is without park)
-    nrj_ref_tot = (gdf_build_ref[ENERGY_IMPACT_ABS].divide(gdf_build_ref[ENERGY_IMPACT_REL])\
+    nrj_ref_tot = (gdf_build_ref[ENERGY_IMPACT_ABS].divide(gdf_build_ref[ENERGY_IMPACT_REL]/100)\
                    .mul(gdf_build_ref[FLOOR_AREA])).sum()
     nrj_impact_ref_tot = (gdf_build_ref[ENERGY_IMPACT_ABS].mul(gdf_build_ref[FLOOR_AREA])).sum()
-    nrj_alt_tot = (gdf_build_alt[ENERGY_IMPACT_ABS].divide(gdf_build_alt[ENERGY_IMPACT_REL])\
+    nrj_alt_tot = (gdf_build_alt[ENERGY_IMPACT_ABS].divide(gdf_build_alt[ENERGY_IMPACT_REL]/100)\
                    .mul(gdf_build_alt[FLOOR_AREA])).sum()
     nrj_impact_alt_tot = (gdf_build_alt[ENERGY_IMPACT_ABS].mul(gdf_build_alt[FLOOR_AREA])).sum()
     
     # Calculate the mean thermal impact weighted by the area of building
-    tc_ref_tot = (gdf_build_ref[THERM_COMFORT_IMPACT_ABS].divide(gdf_build_ref[THERM_COMFORT_IMPACT_REL])\
+    tc_ref_tot = (gdf_build_ref[THERM_COMFORT_IMPACT_ABS].divide(gdf_build_ref[THERM_COMFORT_IMPACT_REL]/100)\
                   .mul(gdf_build_ref[FLOOR_AREA])).sum()/(gdf_build_ref[FLOOR_AREA].sum())
     tc_impact_ref_tot = (gdf_build_ref[THERM_COMFORT_IMPACT_ABS]\
                   .mul(gdf_build_ref[FLOOR_AREA])).sum()/(gdf_build_ref[FLOOR_AREA].sum())
-    tc_alt_tot = (gdf_build_alt[THERM_COMFORT_IMPACT_ABS].divide(gdf_build_alt[THERM_COMFORT_IMPACT_REL])\
+    tc_alt_tot = (gdf_build_alt[THERM_COMFORT_IMPACT_ABS].divide(gdf_build_alt[THERM_COMFORT_IMPACT_REL]/100)\
                   .mul(gdf_build_alt[FLOOR_AREA])).sum()/(gdf_build_alt[FLOOR_AREA].sum())
     tc_impact_alt_tot = (gdf_build_alt[THERM_COMFORT_IMPACT_ABS]\
                   .mul(gdf_build_alt[FLOOR_AREA])).sum()/(gdf_build_alt[FLOOR_AREA].sum())
