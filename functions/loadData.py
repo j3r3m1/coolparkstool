@@ -69,7 +69,7 @@ def loadFile(cursor, filePath, tableName, srid = None, srid_repro = None):
         cursor.execute("""
            DROP TABLE IF EXISTS TEMPO_LOAD;
            CREATE TABLE TEMPO_LOAD
-               AS SELECT {0} {4}ST_SETSRID({1}, {2}){5} AS {1}
+               AS SELECT {0} ST_FORCE2D({4}ST_SETSRID({1}, {2}){5}) AS {1}
                FROM {3};
            DROP TABLE {3};
            ALTER TABLE TEMPO_LOAD RENAME TO {3}

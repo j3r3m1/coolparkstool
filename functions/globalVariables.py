@@ -18,8 +18,8 @@ OUTPUT_RASTER_EXTENSION = ".Gtiff"
 DELETE_OUTPUT_IF_EXISTS = True
 
 # Output folder names
-OUTPUT_PREPROCESSOR_FOLDER = "preprocessor_outputs"
-OUTPUT_PROCESSOR_FOLDER = "processor_outputs"
+OUTPUT_PREPROCESSOR_FOLDER = "1_Prepared_data"
+OUTPUT_PROCESSOR_FOLDER = "2_Calculated_park_effects"
 
 # File base names
 OUTPUT_T = "OUTPUT_T"
@@ -32,7 +32,7 @@ INSTANCE_NAME = "coolparks"
 INSTANCE_ID ="sa"
 INSTANCE_PASS = "sa"
 NEW_DB = True
-ADD_SUFFIX_NAME = False
+ADD_SUFFIX_NAME = True
 
 # Where to save the current JAVA path
 JAVA_PATH_FILENAME = "JavaPath.csv"
@@ -47,6 +47,9 @@ SUPERIMP_THRESH = 0.
 # Merge building geometries as block when closer than 'GEOMETRY_MERGE_TOLERANCE'
 GEOMETRY_MERGE_TOLERANCE = 0.05
 GEOMETRY_SIMPLIFICATION_DISTANCE = 0.25
+
+# Filter buildings whenever they are too small
+BUILDING_MINIMUM_SIZE = 4
 
 # Consider facades as touching each other within a snap tolerance
 GEOMETRY_SNAP_TOLERANCE = 0.05
@@ -141,10 +144,10 @@ DB_NAME = "coolparks"
 DEBUG = True
 
 # Series of canopy and ground park types and combinations of each
-S_GROUND = pd.Series({1: "sol nu",
+S_GROUND = pd.Series({1: "terre",
                       2: "eau", 
-                      3: "herbace", 
-                      4: "impermeable"})
+                      3: "pelouse", 
+                      4: "asphalte"})
 S_CANOPY = pd.Series({10: "arbre isole",
                       20: "boise", 
                       30: "boise dense"})

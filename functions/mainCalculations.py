@@ -325,7 +325,7 @@ def calcParkInfluence(weatherFilePath,
     # Read date and select only useful dates and times for analysis
     df_met = pd.read_csv(weatherFilePath, 
                          skiprows = 11, 
-                         index_col = 0, 
+                         index_col = 1, 
                          parse_dates = True)[[wdir, wspeed, tair, rh, pa]]
     year = df_met.index.year.unique()[0]
     start_day = int(START_DATE.split("/")[0])

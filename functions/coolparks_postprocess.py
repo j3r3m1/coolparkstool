@@ -243,7 +243,7 @@ def createVectorStyle(loadedVector,
     myRenderer = QgsGraduatedSymbolRenderer('', myRangeList)
     myClassificationMethod = QgsApplication.classificationMethodRegistry().method("EqualInterval")
     myRenderer.setClassificationMethod(myClassificationMethod)
-    myRenderer.setClassAttribute("ELEV_MAX")
+    myRenderer.setClassAttribute("ELEV_MIN")
     loadedVector.setRenderer(myRenderer)
     
     return loadedVector

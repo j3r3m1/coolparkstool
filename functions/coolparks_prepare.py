@@ -325,8 +325,6 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
             ON a.ID_COL = b.ID
             WHERE   ST_Y(a.{GEOM_FIELD}) > b.YMIN AND
                     ST_Y(a.{GEOM_FIELD}) <= b.YMAX
-                    AND a.ID_COL > {nCrossWindOut}/2 AND
-                    a.ID_COL <= {nCrossWind} + {nCrossWindOut}/2
                     AND b.{ID_UPSTREAM} > 1;
         """)
         
@@ -560,6 +558,7 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                     PARK_BOUNDARIES_TAB))
     
     # Filter only buildings which are at a given distance from park boundaries
+    # AND filter out small buildings
     cursor.execute(
         f"""
         SELECT SQRT(POWER(ST_XMAX({GEOM_FIELD})-ST_XMIN({GEOM_FIELD}),2)
@@ -576,6 +575,7 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
             WHERE ST_DWITHIN(a.{GEOM_FIELD}, 
                              b.{GEOM_FIELD},
                              {distance_max})
+                 AND ST_AREA(a.{GEOM_FIELD}) > {BUILDING_MINIMUM_SIZE}
         """)
     
     # Fill missing building info with default values
@@ -1050,7 +1050,8 @@ def createsBlocks(cursor, inputBuildings, snappingTolerance = GEOMETRY_MERGE_TOL
        {8};
        DROP TABLE IF EXISTS {0};
         CREATE TABLE {0} 
-                AS SELECT   a.{1}, a.{2}, CAST(a.{3} AS INT) AS {3}, b.{4}
+                AS SELECT   a.{1}, ST_MAKEVALID(a.{2}) AS {2},
+                            CAST(a.{3} AS INT) AS {3}, b.{4}
                 FROM    {5} AS a, {6} AS b
                 WHERE   a.{2} && b.{2} AND ST_INTERSECTS(a.{2}, b.{2});
         """.format( buildingTable               , ", a.".join(build_cols), 
@@ -1285,6 +1286,7 @@ def calc_street_indic(cursor, blocks, rect_city, crosswind_lines, wind_dir):
     real_streets = DataUtil.postfix("REAL_STREETS")
     first_street_indic = DataUtil.postfix("FIRST_STREET_INDIC")
     second_street_indic_buf = DataUtil.postfix("SECOND_STREET_INDIC_BUF")
+    rect_indic_street_tempo = DataUtil.postfix("RECT_INDIC_STREET_TEMPO")
     
     # Output table names
     rectIndicStreet = DataUtil.postfix("CITY_INDIC_STREET", str(wind_dir).replace(".", "_"))
@@ -1524,7 +1526,7 @@ def calc_street_indic(cursor, blocks, rect_city, crosswind_lines, wind_dir):
                     DataUtil.createIndex(tableName=second_street_indic_buf, 
                                          fieldName="ID_RECT",
                                          isSpatial=False),
-                    rectIndicStreet             , "ID_RECT",
+                    rect_indic_street_tempo     , "ID_RECT",
                     GEOM_FIELD                  , STREET_WIDTH,
                     NB_STREET_DENSITY           , first_street_indic,
                     second_street_indic_buf     , ID_UPSTREAM,
@@ -1536,6 +1538,34 @@ def calc_street_indic(cursor, blocks, rect_city, crosswind_lines, wind_dir):
                                          isSpatial=False),
                     OPENING_FRACTION))
     
+    # Fill in some of the null value indicators
+    cursor.execute(
+        f""" 
+        {DataUtil.createIndex(tableName=rect_indic_street_tempo, 
+                              fieldName=ID_UPSTREAM,
+                              isSpatial=False)};
+        {DataUtil.createIndex(tableName=rect_city, 
+                              fieldName=ID_UPSTREAM,
+                              isSpatial=False)}; 
+        {DataUtil.createIndex(tableName=rect_indic_street_tempo, 
+                              fieldName="ID",
+                              isSpatial=False)};
+        {DataUtil.createIndex(tableName=rect_city, 
+                              fieldName="ID",
+                              isSpatial=False)};
+        DROP TABLE IF EXISTS {rectIndicStreet};
+        CREATE TABLE {rectIndicStreet}
+            AS SELECT   a.ID,
+                        a.{ID_UPSTREAM},
+                        a.{GEOM_FIELD},
+                        b.{STREET_WIDTH},
+                        COALESCE(b.{NB_STREET_DENSITY}, 0) AS {NB_STREET_DENSITY},
+                        COALESCE(b.{OPENING_FRACTION}, 1) AS {OPENING_FRACTION}
+            FROM {rect_city} AS a LEFT JOIN {rect_indic_street_tempo} AS b
+            ON a.{ID_UPSTREAM} = b.{ID_UPSTREAM} AND a.ID = b.ID
+            GROUP BY a.ID, a.{ID_UPSTREAM}
+        """)
+                    
     # Delete temporary tables if not debug mode              
     if not DEBUG:
         cursor.execute(
@@ -1544,7 +1574,7 @@ def calc_street_indic(cursor, blocks, rect_city, crosswind_lines, wind_dir):
             """.format( streets_tab                 , streets_extremities,
                         real_streets                , first_street_indic,
                         second_street_indic_buf     , rect_line_corr,
-                        splitted_streets_only)) 
+                        splitted_streets_only       , rect_indic_street_tempo)) 
             
     return rectIndicStreet
 
@@ -1815,8 +1845,8 @@ def calc_build_indic(cursor, buildings, blocks, prefix):
     DROP TABLE IF EXISTS {shared_wall};
     CREATE TABLE {shared_wall}
         AS SELECT 
-            ST_INTERSECTION(st_makevalid(a.{GEOM_FIELD}),
-                            st_makevalid(b.{GEOM_FIELD})) AS {GEOM_FIELD},
+            ST_INTERSECTION(a.{GEOM_FIELD},
+                            b.{GEOM_FIELD}) AS {GEOM_FIELD},
             a.{ID_FIELD_BUILD}, 
             ST_PERIMETER(a.{GEOM_FIELD}) + 
             ST_PERIMETER(ST_HOLES(a.{GEOM_FIELD})) AS PERIMETER

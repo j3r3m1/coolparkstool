@@ -97,12 +97,12 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFile(
                 self.SCENARIO_REF_DIRECTORY,
-                self.tr('Directory of the reference scenario (select the weather folder)'),
+                self.tr(f'Directory of the reference scenario (select the corresponding weather folder in the "{OUTPUT_PROCESSOR_FOLDER}" folder)'),
                 behavior=QgsProcessingParameterFile.Folder))
         self.addParameter(
             QgsProcessingParameterFile(
                 self.SCENARIO_ALT_DIRECTORY,
-                self.tr('Directory of the alternative scenario (select the weather folder)'),
+                self.tr(f'Directory of the alternative scenario (select the corresponding weather folder in the "{OUTPUT_PROCESSOR_FOLDER}" folder)'),
                 behavior=QgsProcessingParameterFile.Folder))
         self.addParameter(
             QgsProcessingParameterFolderDestination(
@@ -372,7 +372,7 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return self.tr('3. Compare two scenarios')
+        return self.tr('3. Compare 2 scenarios')
 
     def group(self):
         """
@@ -396,13 +396,13 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
     
     def shortHelpString(self):
         return self.tr('The CoolParksTool "3. Compare two scenario" module is used '+
-                       'to compare two scenarios when:\n'+
+                       'to compare 2 scenarios when:\n'+
                        '    - only the park composition differs,'+
                        '    - only the urban morphology differs,'+
                        '    - only the weather conditions differ.'
         '\n'
         '\n'
-        """You need to first use the '2. Calculate park effect' for the two scenarios you 
+        """You need to first use the '2. Calculate park effect' for the 2 scenarios you 
         want to simulate."""
         '\n'
         '\n'

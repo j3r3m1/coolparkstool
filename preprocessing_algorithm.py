@@ -152,7 +152,9 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                 self.tr('Default building construction year'),
                 QgsProcessingParameterNumber.Integer,
                 BUILDING_DEFAULT_AGE,
-                True))
+                True,
+                minValue=1915, 
+                maxValue=2023))
         # BUILDIND WWR
         self.addParameter(
             QgsProcessingParameterField(
@@ -175,7 +177,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterField(
                 self.BUILD_SHUTTER_FIELD,
-                self.tr('Building windows-to-wall ratio field'),
+                self.tr('Building shutter opening field'),
                 None,
                 self.BUILDING_TABLE_NAME,
                 QgsProcessingParameterField.Numeric,
@@ -183,7 +185,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.DEFAULT_BUILD_SHUTTER,
-                self.tr('Default building shutter opening'), 
+                self.tr('Default building shutter opening (1 = open)'), 
                 QgsProcessingParameterNumber.Double,
                 QVariant(BUILDING_DEFAULT_SHUTTER), 
                 False,
@@ -317,7 +319,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                 park_bound_file = park_bound_file.split("|layername")[0]
             srid_park_bound = inputParkBoundLayer.crs().postgisSrid()
             if srid_build != srid_park_bound:
-                feedback.pushWarning('Coordinate system of input building layer and park boundaries differs!')
+                raise QgsProcessingException('Coordinate system of input building layer and park boundaries differs!')
 
         # Get park ground layer, check that it has the same SRID as building layer
         # and then get the file directory of the layer
@@ -329,7 +331,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                 park_ground_file = park_ground_file.split("|layername")[0]
             srid_park_ground = inputParkGroundLayer.crs().postgisSrid()
             if srid_build != srid_park_ground:
-                feedback.pushWarning('Coordinate system of input building layer and park ground differs!')
+                raise QgsProcessingException('Coordinate system of input building layer and park ground differs!')
 
         # Get park canopy layer, check that it has the same SRID as building layer
         # and then get the file directory of the layer
@@ -341,7 +343,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
                 park_canopy_file = park_canopy_file.split("|layername")[0]
             srid_park_canopy = inputParkCanopyLayer.crs().postgisSrid()
             if srid_build != srid_park_canopy:
-                feedback.pushWarning('Coordinate system of input building layer and park canopy differs!')
+                raise QgsProcessingException('Coordinate system of input building layer and park canopy differs!')
 
         
         # Defines outputs
