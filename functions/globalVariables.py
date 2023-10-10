@@ -196,7 +196,7 @@ BLOCK_BUFFER_INDIC = 50
 BUILDING_DEFAULT_AGE = 1970
 BUILDING_DEFAULT_RENOVATION = False
 BUILDING_DEFAULT_HEIGHT = 9
-BUILDING_DEFAULT_WINDOWS_WALL_RATIO = 0.2
+BUILDING_DEFAULT_WINDOWS_WALL_RATIO = 20
 BUILDING_DEFAULT_SHUTTER = 1
 BUILDING_DEFAULT_NAT_VENTIL = 0.6
 BUILDING_DEFAULT_FLOOR_HEIGHT = 3
@@ -224,7 +224,7 @@ BUILDING_PROPERTIES = {1: pd.DataFrame({"Name": ["Construit avant 1915",
                                                          1.8,1.4,1.3,1.3,1.1],
                                         BUILDING_USLAB : [1.89,.965,1.515,1.365,
                                                           1.305,.745,.3,.38,.185,.165],
-                                        BUILDING_INFILTRATION_RATE : [3,3,3,3,2,2,1.5,1.5,1.3,.6],
+                                        BUILDING_INFILTRATION_RATE : [1,1,1,1,0.6,0.6,0.5,0.5,0.4,.2],
                                         BUILDING_MECHANICAL_VENT_RATE : [0,0,.6,.6,.6,.6,.6,.6,.6,.6]},
                                         index = np.arange(1,11)),
                        2: pd.DataFrame({"Name": ["Construit avant 1915",
@@ -249,7 +249,7 @@ BUILDING_PROPERTIES = {1: pd.DataFrame({"Name": ["Construit avant 1915",
                                                          1.8,1.3,1.3,1.1],
                                         BUILDING_USLAB : [1.89,1.515,1.565,1.365,.74,
                                                           .375,.36,.285,.24,.165],
-                                        BUILDING_INFILTRATION_RATE : [3,3,3,3,2,2,1.7,1.7,1.7,1],
+                                        BUILDING_INFILTRATION_RATE : [1,1,1,1,0.6,0.6,0.5,0.5,0.4,.2],
                                         BUILDING_MECHANICAL_VENT_RATE : [0,0,.6,.6,.6,.6,.6,.6,.6,.6]},
                                         index = np.arange(1,11)),
                        3: pd.DataFrame({"Name": ["Construit avant 1915",
@@ -274,7 +274,7 @@ BUILDING_PROPERTIES = {1: pd.DataFrame({"Name": ["Construit avant 1915",
                                                          1.8,2.15,1.3,1.3,1.1],
                                         BUILDING_USLAB : [1.565,1.515,1.365,1.365,
                                                           .335,.315,.315,.275,.2,.22],
-                                        BUILDING_INFILTRATION_RATE : [3,3,3,3,2,2,1.7,1.7,1.7,1],
+                                        BUILDING_INFILTRATION_RATE : [1,1,1,1,0.6,0.6,0.5,0.5,0.4,.2],
                                         BUILDING_MECHANICAL_VENT_RATE : [0,0,.6,.6,.6,.6,.6,.6,.6,.6]},
                                         index = np.arange(1,11))}
 
@@ -376,7 +376,7 @@ BUILD_COMFORT_PATH = os.path.join(Path(os.path.dirname(os.path.abspath(__file__)
 BUILD_EXTREMUM_VAL = pd.DataFrame({BUILDING_WWR: [20, 80],
                                    ASPECT_RATIO: [0, 4],
                                    BUILDING_AMPLIF_FACTOR: [0, 40],
-                                   BUILDING_SHUTTER: [0,1],
+                                   BUILDING_SHUTTER: [0, 1],
                                    BUILDING_UROOF: [0.1, 3],
                                    BUILDING_UWALL: [0.12, 2.6],
                                    BUILDING_USLAB: [0.12, 3.55],

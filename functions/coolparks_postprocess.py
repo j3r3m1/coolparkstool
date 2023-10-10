@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from .globalVariables import *
-from .DataUtil import trunc_to
+from .DataUtil import trunc_to, round_to
 
 from qgis.PyQt.QtGui import QColor
 from qgis.core import (QgsProject, 
@@ -15,12 +15,21 @@ from qgis.core import (QgsProject,
                        QgsProcessingContext,
                        QgsSymbol,
                        QgsRendererRange,
-                       QgsGraduatedSymbolRenderer)
+                       QgsGraduatedSymbolRenderer,
+                       QgsProcessingLayerPostProcessorInterface)
 # from qgis.utils import iface
 
 import numpy as np
 import pandas as pd
 import os
+
+class Renamer(QgsProcessingLayerPostProcessorInterface):
+    def __init__(self, layer_name):
+        self.name = layer_name
+        super().__init__()
+        
+    def postProcessLayer(self, layer, context, feedback):
+        layer.setName(self.name)
 
 def loadCoolParksRaster(filepath,
                         specific_scale,
@@ -62,15 +71,17 @@ def loadCoolParksVector(filepath,
                         opacity = DEFAULT_OPACITY):
     loadedVector = \
         QgsVectorLayer(filepath, 
-                       filepath.split(os.sep)[-1],
+                       "",
                        "ogr")
+
     if not loadedVector.isValid():
         feedback.pushWarning("Vector layer failed to load!")
     else:
         context.addLayerToLoadOnCompletion(loadedVector.id(),
-                                            QgsProcessingContext.LayerDetails(layername,
+                                            QgsProcessingContext.LayerDetails("",
                                                                               QgsProject.instance(),
                                                                               ''))
+        context.layerToLoadOnCompletionDetails(loadedVector.id()).setPostProcessor(layername)
         context.temporaryLayerStore().addMapLayer(loadedVector)
         
         # For building informations, the variable and the intervals are not defined
@@ -147,26 +158,26 @@ def createVectorStyle(loadedVector,
                                            for feature in loadedVector.getFeatures()]})
     
     # Get the interval range in normal condition (first and last can be smaller...)
-    interval_range = intervals.loc[1,"ELEV_MAX"]-intervals.loc[1,"ELEV_MIN"]
+    interval_range = round_to(intervals.loc[1,"ELEV_MAX"]-intervals.loc[1,"ELEV_MIN"], 3)
     
     # Get the number of intervals (might be lower than what is normally needed due to limited data range)
     nb_intervals = intervals.index.size
     
     # Extend the range of the first and last interval if needed
     if intervals.loc[0,"ELEV_MAX"]-intervals.loc[0,"ELEV_MIN"] != interval_range:
-        intervals.loc[0,"ELEV_MIN"] = intervals.loc[0,"ELEV_MAX"] - interval_range
+        intervals.loc[0,"ELEV_MIN"] = round_to(intervals.loc[0,"ELEV_MAX"] - interval_range, 3)
     if intervals.loc[nb_intervals-1,"ELEV_MAX"]-intervals.loc[nb_intervals-1,"ELEV_MIN"] != interval_range:
-        intervals.loc[nb_intervals-1,"ELEV_MAX"] = intervals.loc[nb_intervals-1,"ELEV_MIN"] + interval_range
+        intervals.loc[nb_intervals-1,"ELEV_MAX"] = round_to(intervals.loc[nb_intervals-1,"ELEV_MIN"] + interval_range, 3)
     
     # If the number of intervals is lower than expected, add some
     i = 0
     while intervals.loc[i,"ELEV_MIN"] > valueMin:
-        intervals.loc[i-1,"ELEV_MIN"] = intervals.loc[i,"ELEV_MIN"] - interval_range
+        intervals.loc[i-1,"ELEV_MIN"] = round_to(intervals.loc[i,"ELEV_MIN"] - interval_range, 3)
         intervals.loc[i-1,"ELEV_MAX"] = intervals.loc[i,"ELEV_MIN"]
         i -= 1
     i = nb_intervals - 1
     while intervals.loc[i,"ELEV_MAX"] < valueMax:
-        intervals.loc[i+1,"ELEV_MAX"] = intervals.loc[i,"ELEV_MAX"] + interval_range
+        intervals.loc[i+1,"ELEV_MAX"] = round_to(intervals.loc[i,"ELEV_MAX"] + interval_range, 3)
         intervals.loc[i+1,"ELEV_MIN"] = intervals.loc[i,"ELEV_MAX"]
         i += 1
     intervals.sort_index(inplace = True)
@@ -243,7 +254,7 @@ def createVectorStyle(loadedVector,
     myRenderer = QgsGraduatedSymbolRenderer('', myRangeList)
     myClassificationMethod = QgsApplication.classificationMethodRegistry().method("EqualInterval")
     myRenderer.setClassificationMethod(myClassificationMethod)
-    myRenderer.setClassAttribute("ELEV_MIN")
+    myRenderer.setClassAttribute("ELEV_MAX")
     loadedVector.setRenderer(myRenderer)
     
     return loadedVector

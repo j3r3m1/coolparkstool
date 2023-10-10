@@ -125,7 +125,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterField(
                 self.BUILD_HEIGHT_FIELD,
-                self.tr('Building height field'),
+                self.tr('Building height field (unit: m)'),
                 None,
                 self.BUILDING_TABLE_NAME,
                 QgsProcessingParameterField.Numeric,
@@ -159,7 +159,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterField(
                 self.BUILD_WWR_FIELD,
-                self.tr('Building windows-to-wall ratio field'),
+                self.tr('Building windows-to-wall ratio field (unit: %)'),
                 None,
                 self.BUILDING_TABLE_NAME,
                 QgsProcessingParameterField.Numeric,
@@ -167,12 +167,12 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.DEFAULT_BUILD_WWR,
-                self.tr('Default building windows-to-wall ratio'), 
+                self.tr('Default building windows-to-wall ratio (%)'), 
                 QgsProcessingParameterNumber.Double,
                 QVariant(BUILDING_DEFAULT_WINDOWS_WALL_RATIO), 
                 False,
-                minValue=0.2, 
-                maxValue=0.8))
+                minValue=20, 
+                maxValue=100))
         # BUILDING Shutter
         self.addParameter(
             QgsProcessingParameterField(
@@ -195,7 +195,7 @@ class CoolParksPreparerAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterField(
                 self.BUILD_NAT_VENTIL_FIELD,
-                self.tr('Building natural ventilation rate field'),
+                self.tr('Building natural ventilation rate field (unit: vol/h)'),
                 None,
                 self.BUILDING_TABLE_NAME,
                 QgsProcessingParameterField.Numeric,

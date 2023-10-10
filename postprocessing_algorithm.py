@@ -58,7 +58,7 @@ from qgis.PyQt.QtGui import QIcon
 import inspect
 import processing
 
-from .functions.coolparks_postprocess import loadCoolParksRaster, loadCoolParksVector
+from .functions.coolparks_postprocess import loadCoolParksRaster, loadCoolParksVector, Renamer
 from .functions import mainCalculations
 from .functions.globalVariables import *
 from .functions import WriteMetadata
@@ -242,6 +242,9 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
         else:
             sign_digits = 2
         
+        global layernames
+        layernames = {}
+        i = 0
         # Convert the raster layers into contours and load the resulting layers into QGIS with a given style
         for tp in [DAY_TIME, NIGHT_TIME]:
             if diff_deltaT_path[tp]:                     
@@ -264,12 +267,12 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
                                 'OUTPUT': diff_deltaT_path[tp] + ".geojson"})   
                 
                 if changes_string == "buildings characteristics":
-                    layername = f"Cooling (ref) at {tp}:00 (°C)"
+                    layernames[i] = Renamer(f"Cooling (ref) at {tp}:00 (°C)")
                 else:
-                    layername = f"Cooling (alt - ref) at {tp}:00 (°C)"
+                    layernames[i] = Renamer(f"Cooling (alt - ref) at {tp}:00 (°C)")
                 # Load the vector layer with a given style
                 loadCoolParksVector(filepath = diff_deltaT_path[tp] + ".geojson",
-                                    layername = layername,
+                                    layername = layernames[i],
                                     variable = None,
                                     subgroup = new_group,
                                     vector_min = deltaT_min_value,
@@ -278,6 +281,8 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
                                     context = context,
                                     valueZero = 0,
                                     opacity = DEFAULT_OPACITY)
+                
+                i += 1
 
                 # loadCoolParksRaster(filepath = diff_deltaT_path[tp],
                 #                     specific_scale = True,
@@ -305,8 +310,9 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
                                 'OUTPUT': diff_T_path[tp] + ".geojson"}) 
                 
                 # Load the vector layer with a given style
+                layernames[i] = Renamer(f"Air temperature (alt-ref) at {tp}:00 (°C)")
                 loadCoolParksVector(filepath = diff_T_path[tp] + ".geojson",
-                                    layername = f"Air temperature (alt-ref) at {tp}:00 (°C)",
+                                    layername = layernames[i],
                                     variable = None,
                                     subgroup = new_group,
                                     vector_min = T_min_value,
@@ -323,11 +329,14 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
                 #                     raster_max = T_max_value,
                 #                     feedback = feedback,
                 #                     context = context)
+                
+                i += 1
         
         if diff_build_path:
             for var in diff_build_extremums:
+                layernames[i] = Renamer(BUILDING_LEGEND_POSTPROCESS[var])
                 loadCoolParksVector(filepath = diff_build_path,
-                                    layername = BUILDING_LEGEND_POSTPROCESS[var],
+                                    layername = layernames[i],
                                     variable = var,
                                     subgroup = new_group,
                                     vector_min = diff_build_extremums[var][0],
@@ -336,6 +345,7 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
                                     context = context,
                                     valueZero = 0,
                                     opacity = 1)
+                i += 1
         
         # Return the output file names
         return {self.OUTPUT_DIRECTORY: finalDirectory,
@@ -354,7 +364,7 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
                 f'D.1. Average degree-hour of thermal discomfort in buildings saved thanks to the park in '+ \
                 f'the reference scenario': f'{dict_build_glob["THERM_COMFORT_REF"]}',
                 f'D.2. Average degree-hour of thermal discomfort in buildings saved thanks to the park in '+ \
-                f'the alternative scenario': f'{dict_build_glob["ENERGY_IMPACT_ALT"]}'
+                f'the alternative scenario': f'{dict_build_glob["THERM_COMFORT_ALT"]}'
                 }
     
     def name(self):

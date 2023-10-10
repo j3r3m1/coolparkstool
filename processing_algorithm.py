@@ -61,7 +61,7 @@ from .functions import mainCalculations
 from .functions.globalVariables import *
 from .functions import WriteMetadata
 from .functions.DataUtil import trunc_to, round_to
-from .functions.coolparks_postprocess import loadCoolParksRaster, loadCoolParksVector
+from .functions.coolparks_postprocess import loadCoolParksRaster, loadCoolParksVector, Renamer
 
 
 class CoolParksProcessorAlgorithm(QgsProcessingAlgorithm):
@@ -167,11 +167,14 @@ class CoolParksProcessorAlgorithm(QgsProcessingAlgorithm):
             sign_digits = 2
             
         # Load data into QGIS
+        global layernames
+        layernames = {}
+        i = 0
         for tp in [DAY_TIME, NIGHT_TIME]:
-            layername = f"{scenarioDirectory.split(os.sep)[-1]} and {weatherScenario}: Park impact on air temperature at {tp}:00 (°C)"
+            layernames[i] = Renamer(f"{scenarioDirectory.split(os.sep)[-1]} and {weatherScenario}: Park impact on air temperature at {tp}:00 (°C)")
             # Load the vector layer with a given style
             loadCoolParksVector(filepath = output_dt_path[tp] + ".geojson",
-                                layername = layername,
+                                layername = layernames[i],
                                 variable = None,
                                 subgroup = QgsLayerTreeGroup("parameter not used..."),
                                 vector_min = deltaT_min_value,
@@ -180,11 +183,13 @@ class CoolParksProcessorAlgorithm(QgsProcessingAlgorithm):
                                 context = context,
                                 valueZero = 0,
                                 opacity = DEFAULT_OPACITY)
+            i += 1
         
         # Load building results into QGIS
         for var in BUILDING_LEGEND_PROCESS.index:
+            layernames[i] = Renamer(f"{scenarioDirectory.split(os.sep)[-1]} and {weatherScenario}: {BUILDING_LEGEND_PROCESS[var]}")
             loadCoolParksVector(filepath = output_build_path,
-                                layername = f"{scenarioDirectory.split(os.sep)[-1]} and {weatherScenario}: {BUILDING_LEGEND_PROCESS[var]}",
+                                layername = layernames[i],
                                 variable = var,
                                 subgroup = QgsLayerTreeGroup("parameter not used..."),
                                 vector_min = gdf_build[var].min(),
@@ -193,6 +198,7 @@ class CoolParksProcessorAlgorithm(QgsProcessingAlgorithm):
                                 context = context,
                                 valueZero = 0,
                                 opacity = 1)
+            i += 1
         
         # Return the output file names
         return {self.OUTPUT_DIRECTORY: scenarioDirectory + os.sep + OUTPUT_PROCESSOR_FOLDER + os.sep + prefix}

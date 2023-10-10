@@ -247,8 +247,11 @@ def windDirectionFromXY(windSpeedEast, windSpeedNorth):
     return radAngle
 
 def round_to(number, ndecim):
-    return round(number, ndecim - int(np.floor(np.log10(abs(number))) + 1))
-
+    if number == 0 or np.isnan(number):
+        return number
+    else:
+        return round(number, ndecim - int(np.floor(np.log10(abs(number))) + 1))
+    
 def trunc_to(x, sign_nb, upper = True):
 	"""Return a truncated decimal (or integer) number with "sign_nb" significative numbers
 	
