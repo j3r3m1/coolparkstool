@@ -545,7 +545,10 @@ def build_impact_formula(df_indic, variable):
         idx_build = df_indic[condition].index
         
         # Calculates the energy needed by the building
-        #constant = df_coef[df_coef["var1"].isna()].value[0]
+        if not df_coef[df_coef["var1"].isna()].empty:
+            constant = df_coef[df_coef["var1"].isna()].value[0]
+        else:
+            constant = 0
         
         condition_lin_term = (df_coef["var1"].notna())*(df_coef["var2"].isna())
         linear_terms = sum([row["value"] * df_indic.loc[idx_build, row["var1"]] \
@@ -556,7 +559,6 @@ def build_impact_formula(df_indic, variable):
                             * df_indic.loc[idx_build, row["var2"]] \
                         for index, row in df_coef[condition_cross_term][["value", "var1", "var2"]].iterrows()])
     
-        #df_effect.loc[idx_build] = constant + linear_terms + cross_terms
-        df_effect.loc[idx_build] = linear_terms + cross_terms
+        df_effect.loc[idx_build] = constant + linear_terms + cross_terms
     
     return df_effect
