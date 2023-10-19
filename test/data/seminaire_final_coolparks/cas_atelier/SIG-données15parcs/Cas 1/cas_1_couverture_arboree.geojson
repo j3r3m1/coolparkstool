@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "couverture_arboree",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::2154" } },
+"features": [
+
+]
+}

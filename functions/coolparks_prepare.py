@@ -528,28 +528,34 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
             AS SELECT   ST_NORMALIZE(ST_PRECISIONREDUCER(ST_COLLECTIONEXTRACT(ST_INTERSECTION(a.{2}, b.{2}),
                                                                               3),
                                                          3)) AS {2},
-                        a.{4}, 
-                        a.EXPLOD_ID AS ID
+                        a.{4}
             FROM ST_EXPLODE('(SELECT {2}, CASE {3} AS {4} 
                               FROM TEMPO_PARK_CANOPY)') AS a,
                    {6} AS b
             WHERE NOT ST_ISEMPTY(a.{2}) AND a.{4} IS NOT NULL;
-        CREATE TABLE {0}
-            AS SELECT {2}, {4}, ID
+        CREATE TABLE {0}({2} GEOMETRY, 
+                         {4} INTEGER, 
+                         ID SERIAL)
+            AS SELECT {2} AS {2},
+                      {4} AS {4},
+                      NULL AS ID
             FROM TEMPO_PARK_CANOPY_1
             WHERE NOT ST_ISEMPTY({2});
         CREATE TABLE TEMPO_PARK_GROUND_1
             AS SELECT   ST_NORMALIZE(ST_PRECISIONREDUCER(ST_COLLECTIONEXTRACT(ST_INTERSECTION(a.{2}, b.{2}), 
                                                                               3),
                                                          3)) AS {2}, 
-                        a.{4}, 
-                        a.EXPLOD_ID AS ID
+                        a.{4}
             FROM    ST_EXPLODE('(SELECT {2}, CASE {5} AS {4} 
                                FROM TEMPO_PARK_GROUND)') AS a,
                     {6} AS b
             WHERE NOT ST_ISEMPTY(a.{2}) AND a.{4} IS NOT NULL;
-        CREATE TABLE {1}
-            AS SELECT {2}, {4}, ID
+        CREATE TABLE {1}({2} GEOMETRY, 
+                         {4} INTEGER, 
+                         ID SERIAL)
+            AS SELECT {2} AS {2},
+                      {4} AS {4},
+                      NULL AS ID
             FROM TEMPO_PARK_GROUND_1
             WHERE NOT ST_ISEMPTY({2});
         """.format( PARK_CANOPY             , PARK_GROUND,
