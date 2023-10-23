@@ -130,17 +130,17 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(f'The alternative scenario does not contain any results')
         if refScenarioDirectory == altScenarioDirectory:
             raise QgsProcessingException(f'You are proposing to compare the same scenarios...')
-        if changes_string == "buildings characteristics":
-            build_ref = gpd.read_file(Path(altScenarioDirectory).parent.parent\
-                                     .joinpath(Path(os.path.join(OUTPUT_PREPROCESSOR_FOLDER,
-                                                                 OUTPUT_BUILD_INDIC + ".geojson"))))
-            build_alt = gpd.read_file(Path(refScenarioDirectory).parent.parent\
-                                     .joinpath(Path(os.path.join(OUTPUT_PREPROCESSOR_FOLDER,
-                                                                 OUTPUT_BUILD_INDIC + ".geojson"))))
-            test_geom = (build_ref.geom_almost_equals(build_alt).sum() == build_ref[ID_FIELD_BUILD].count())
-            test_height = ((build_ref[HEIGHT_FIELD] == build_alt[HEIGHT_FIELD]).sum() == build_ref[ID_FIELD_BUILD].count())
-            if not test_geom or not test_height:
-                raise QgsProcessingException(f'You have specified that the change between scenario was "buildings characteristics". Buildings location and height should be the same in reference and alternative scenarios')
+        # if changes_string == "buildings characteristics":
+        #     build_ref = gpd.read_file(Path(altScenarioDirectory).parent.parent\
+        #                              .joinpath(Path(os.path.join(OUTPUT_PREPROCESSOR_FOLDER,
+        #                                                          OUTPUT_BUILD_INDIC + ".geojson"))))
+        #     build_alt = gpd.read_file(Path(refScenarioDirectory).parent.parent\
+        #                              .joinpath(Path(os.path.join(OUTPUT_PREPROCESSOR_FOLDER,
+        #                                                          OUTPUT_BUILD_INDIC + ".geojson"))))
+        #     test_geom = (build_ref.geom_almost_equals(build_alt).sum() == build_ref[ID_FIELD_BUILD].count())
+        #     test_height = ((build_ref[HEIGHT_FIELD] == build_alt[HEIGHT_FIELD]).sum() == build_ref[ID_FIELD_BUILD].count())
+        #     if not test_geom or not test_height:
+        #         raise QgsProcessingException(f'You have specified that the change between scenario was "buildings characteristics". Buildings location and height should be the same in reference and alternative scenarios')
         if changes_string == "weather":
             if (Path(refScenarioDirectory).parent != Path(altScenarioDirectory).parent):
                 raise QgsProcessingException(f'The alternative and reference weather should be saved in the same scenario folder')
@@ -213,8 +213,8 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
         for tp in [DAY_TIME, NIGHT_TIME]:
             # In case only building charac have been changed, no differences of air temp
             # between ref and alt, thus just show the effect of the park on its surroundings
-            if changes_string == "buildings characteristics":
-                diff_deltaT_path[tp] = refScenarioDirectory + os.sep + OUTPUT_DT + "_" + str(tp) + "h"
+            # if changes_string == "buildings characteristics":
+            #     diff_deltaT_path[tp] = refScenarioDirectory + os.sep + OUTPUT_DT + "_" + str(tp) + "h"
             
             if diff_deltaT_path[tp]:  
                 layer_stat = processing.run("native:rasterlayerstatistics", 
@@ -266,10 +266,10 @@ class CoolParksAnalyzerAlgorithm(QgsProcessingAlgorithm):
                                 'FIELD_NAME_MAX':'ELEV_MAX',
                                 'OUTPUT': diff_deltaT_path[tp] + ".geojson"})   
                 
-                if changes_string == "buildings characteristics":
-                    layernames[i] = Renamer(f"Cooling (ref) at {tp}:00 (°C)")
-                else:
-                    layernames[i] = Renamer(f"Cooling (alt - ref) at {tp}:00 (°C)")
+                # if changes_string == "buildings characteristics":
+                #     layernames[i] = Renamer(f"Cooling (ref) at {tp}:00 (°C)")
+                # else:
+                layernames[i] = Renamer(f"Cooling (alt - ref) at {tp}:00 (°C)")
                 # Load the vector layer with a given style
                 loadCoolParksVector(filepath = diff_deltaT_path[tp] + ".geojson",
                                     layername = layernames[i],
