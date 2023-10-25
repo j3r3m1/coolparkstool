@@ -10,6 +10,10 @@ As output the cooling effect of the park on its surrounding built-up area
 is calculated as well as its impact on building energy consumption and building
  indoor thermal comfort
 
+## Description
+
+Vous trouverez une vidéo et un support de présentation de l'outil CoolParksTool.
+
 ## Installation
 
 ### Pré-requis
@@ -23,11 +27,11 @@ Ce système reposant sur Java, il est nécessaire que votre ordinateur dispose d
 ### Créer un environnement propice à l’installation de CoolParksTool
 
 Il est tout d'abord nécessaire de créer un environnement propice à l'installation de CoolParksTool. Pour cela, 2 solutions sont possibles :
-- si vous avez un environnement Windows, il est préférable de préalablement installer le programme qui s’appelle osgeo4W (https://trac.osgeo.org/osgeo4w/).
-- Si vous ne souhaitez pas utiliser cet outil ou que vous avez un environnement Linux ou MacOS, il est recommandé de préalablement utiliser le programme qui s’appelle Anaconda (https://anaconda.org/).
+- **Vous avez un environnement Windows**, il est préférable de préalablement installer le programme qui s’appelle osgeo4W (https://trac.osgeo.org/osgeo4w/).
+- **Vous avez un environnement Linux ou MacOS** ou vous avez Windows mais ne souhaitez pas utiliser osgeo4w, il est recommandé de préalablement utiliser le programme qui s’appelle Anaconda (https://anaconda.org/).
 
-#### Installation via osgeo4W
-Ce programme permet de gérer l’installation de librairies python dans un environnement dédié dans lequel un certain nombre de librairies utilisées par QGIS sont préinstallées. 
+#### Vous avez un environnement Windows
+Il est recommandé d'installer osgeo4W. Ce programme permet de gérer l’installation de librairies python dans un environnement dédié dans lequel un certain nombre de librairies utilisées par QGIS sont préinstallées. 
 
 Pour l’utiliser :
 - télécharger l’installateur: https://download.osgeo.org/osgeo4w/v2/osgeo4w-setup.exe
@@ -39,8 +43,8 @@ Pour l’utiliser :
     - pip install unidecode
     - pip install jaydebeapi
 
-#### Installation via anaconda
-Anaconda permet de gérer l’installation de librairies Python via la création d’environnements dédiés à un besoin donné. Il permet également de s’assurer de l’intercompatibilité des librairies entre elles dans un environnement donné. 
+#### Vous avez un environnement Linux ou MacO
+Si vous ne souhaitez pas installer osgeo4W ou que vous utilisez un système d'exploitation linux ou MacOS, il est recommandé d'installer Anaconda. Il permet de gérer l’installation de librairies Python via la création d’environnements dédiés à un besoin donné. Il permet également de s’assurer de l’intercompatibilité des librairies entre elles dans un environnement donné. 
 
 Pour l’utiliser :
 - suiver les recommandations d'installation relatives à votre système d'exploitation : https://docs.anaconda.com/free/anaconda/install
@@ -56,13 +60,10 @@ Pour l’utiliser :
 
 ### Installer CoolParksTool
 Quelle que soit la solution choisie, vous devez maintenant avoir QGIS ouvert dans un environnement propice au bon fonctionnement de CoolParksTool. Pour installer ce dernier, il suffit maintenant :
-- de télécharger le zip de CoolParksTool depuis le dépôt GitHub : https://github.com/j3r3m1/coolparkstool/archive/refs/heads/main.zip
-- d’ouvrir le menu de gestion des librairies via “Extensions → gérer les XXX” puis sélectionner “install from zip” dans le ruban de gauche
-- de sélectionner le zip de CoolParksTool préalablement téléchargé et cliquer sur “Installer”
+- de lancer QGIS et d'installer le plug-in via le menu "Extensions" puis "Installer/Gérer les extensions". Vous pouvez maintenant rechercher puis sélectionner "coolparkstool" puis cliquer sur "Installer le plugin".
 - un message sur fond vers vous informant du succès de l'installation doit normalement apparaître temporairement. Lorsque vous ouvrez la boîte à outil de QGIS, le plug-in CoolParks tool doit maintenant apparaître (cf. Figure ci-dessous)
 
 ![image](https://github.com/j3r3m1/coolparkstool/assets/13120405/20b24f01-5c53-48ae-91ba-0c8884f7d78f)
-
 
  
 ## Acknowledgements
