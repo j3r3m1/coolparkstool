@@ -12,7 +12,7 @@ is calculated as well as its impact on building energy consumption and building
 
 ## Description
 
-Vous trouverez une [vidéo](https://github.com/j3r3m1/coolparkstool/blob/main/Resources/Presentations/video_presentation.mp4) et un [support de présentation](https://github.com/j3r3m1/coolparkstool/blob/main/Resources/Presentations/10h15-10h30_Presentation_CoolParksTool.pdf) de l'outil CoolParksTool.
+Vous trouverez une [vidéo](https://github.com/j3r3m1/coolparkstool/blob/main/Presentations/video_presentation.mp4) et un [support de présentation](https://github.com/j3r3m1/coolparkstool/blob/main/Presentations/10h15-10h30_Presentation_CoolParksTool.pdf) de l'outil CoolParksTool.
 
 ## Installation
 
