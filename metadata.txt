@@ -6,7 +6,7 @@
 name=CoolParksTool
 qgisMinimumVersion=3.0
 description=This plugin evaluates the cooling effect of a park and its impact on buildings energy and thermal comfort
-version=0.1
+version=0.0.1
 author=Jérémy Bernard
 email=jeremy.bernard@zaclys.net
 
@@ -14,8 +14,8 @@ about=
         This plugin summarizes the results of the research project called CoolParks. The user provides park boundaries, type of ground within the park, type of canopy within the park and meteorological conditions. As output the cooling effect of the park on its surrounding built-up area is calculated as well as its impact on building energy consumption and building indoor thermal comfort
 
 
-tracker=https://github.com/J3r3m1/CoolParksTool/issues
-repository=https://github.com/J3r3m1/CoolParksTool
+tracker=https://github.com/j3r3m1/coolparkstool/issues
+repository=https://github.com/j3r3m1/coolparkstool
 # End of mandatory metadata
 
 # Recommended items:
@@ -23,16 +23,16 @@ repository=https://github.com/J3r3m1/CoolParksTool
 hasProcessingProvider=yes
 # Uncomment the following line and add your changelog:
 changelog=
-    0.1   : First release. Experimental.
+    0.0.1   : First release. Experimental.
     
 # Tags are comma separated with spaces allowed
-tags=urban climate, urban planning, shadow, modelling, urban morphology, urban geometry
+tags=urban climate, urban planning, parks, cooling, modelling, urban morphology, urban geometry
 
-homepage=https://github.com/J3r3m1/CoolParksTool
+homepage=https://github.com/j3r3m1/coolparkstool#readme
 # category=Plugins
-icon=icons/icon_umep.png
+icon=icons/CoolParksTool.png
 # experimental flag
-experimental=False
+experimental=True
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False
