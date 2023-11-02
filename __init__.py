@@ -35,4 +35,4 @@ def classFactory(iface):  # pylint: disable=invalid-name
     """
     #
     from .processing_coolparks import ProcessingCoolParksPlugin
-    return ProcessingCoolParksPlugin(iface)
+    return ProcessingCoolParksPlugin()
