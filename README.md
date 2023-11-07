@@ -48,15 +48,13 @@ Si vous ne souhaitez pas installer osgeo4W ou que vous utilisez un système d'ex
 
 Pour l’utiliser :
 - suiver les recommandations d'installation relatives à votre système d'exploitation : https://docs.anaconda.com/free/anaconda/install
-- il s’agit maintenant de créer un nouvel environnement dédié à l’utilisation de CoolParksTool et d’installer les librairies nécessaires à son fonctionnement dans cet environnement. Pour cela, deux solutions existent :
-    - si vous avez installé anaconda en mode “ligne de commande” :
-        - ouvrer un terminal
-        - créer un nouvel environnement : conda create --name coolparks
-        - activer cet environnement : conda activate coolparks
-        - ajouter une nouvelle source de librairies d’où anaconda pourra télécharger des librairies : conda config --add channels conda-forge
-        - installer les librairies (cela peut prendre un temps considérable de gérer les dépendances) : conda install gdal qgis=3.28.3 shapely geopandas unidecode statsmodels jaydebeapi
-        - lancer QGIS via le terminal en tapant : qgis
-    - si vous avez installé anaconda en mode “graphique” :
+- il s’agit maintenant de créer un nouvel environnement dédié à l’utilisation de CoolParksTool et d’installer les librairies nécessaires à son fonctionnement dans cet environnement. Pour cela :
+    - ouvrez un terminal
+    - créez un nouvel environnement : conda create --name coolparks
+    - activez cet environnement : conda activate coolparks
+    - ajoutez une nouvelle source de librairies d’où anaconda pourra télécharger des librairies : conda config --add channels conda-forge
+    - installez les librairies (cela peut prendre un temps considérable de gérer les dépendances) : conda install gdal qgis=3.28.3 shapely geopandas unidecode statsmodels jaydebeapi
+    - lancez QGIS via le terminal en tapant : qgis
 
 ### Installer CoolParksTool
 Quelle que soit la solution choisie, vous devez maintenant avoir QGIS ouvert dans un environnement propice au bon fonctionnement de CoolParksTool. Pour installer ce dernier, il suffit maintenant :
