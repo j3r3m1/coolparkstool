@@ -35,6 +35,8 @@ def prepareData(plugin_directory,
                 parkCanopyFilePath,
                 parkGroundFilePath,
                 srid,
+                canopy_cover_type,
+                ground_cover_type,
                 build_height,
                 build_age,
                 build_wwr,
@@ -93,7 +95,26 @@ def prepareData(plugin_directory,
                                parkGroundFilePath = parkGroundFilePath, 
                                parkCanopyFilePath = parkCanopyFilePath, 
                                buildingFilePath = buildingFilePath, 
-                               srid = srid)
+                               srid = srid,
+                               canopy_cover_type = canopy_cover_type,
+                               ground_cover_type = ground_cover_type,
+                               build_height = build_height,
+                               build_age = build_age,
+                               build_wwr = build_wwr,
+                               build_shutter = build_shutter,
+                               build_nat_ventil = build_nat_ventil)
+            
+    # Update column names if needed
+    if build_height:
+        build_height = HEIGHT_FIELD
+    if build_age:
+        build_age = BUILDING_AGE
+    if build_wwr:
+        build_wwr = BUILDING_WWR
+    if build_shutter:
+        build_shutter = BUILDING_SHUTTER
+    if build_nat_ventil:
+        build_nat_ventil = BUILDING_NATURAL_VENT_RATE
         
     # Modify and filter input data
     distance_max =  prep_fct.modifyInputData(cursor = cursor, 
@@ -339,6 +360,9 @@ def calcParkInfluence(weatherFilePath,
                              tair: T_AIR, 
                              rh: RH, 
                              pa: P_ATMO}, inplace = True)
+    
+    # Consider that the datetime index are UTC
+    df_met.index = df_met.index.tz_convert(None)
 
     # For each time period (day - 0PM - and night - 11 PM)
     output_t_path = {}

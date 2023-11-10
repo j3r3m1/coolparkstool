@@ -76,7 +76,7 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
     dx = park_bb_xsize / nCrossWind
     if dx < MIN_CELL_SIZE:
         nCrossWind = int(park_bb_xsize / MIN_CELL_SIZE)
-        dx = park_bb_xsize / nCrosswind
+        dx = park_bb_xsize / nCrossWind
     
     # The total number of corridors outside the park
     nCrossWindOut = nCrossWind * 2
@@ -401,7 +401,9 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
     return rec_coord_park_upstream, rec_coord_city_upstream, grid, crosswind_line, dx
 
 def loadInputData(cursor, parkBoundaryFilePath, parkGroundFilePath, 
-                  parkCanopyFilePath, buildingFilePath, srid):
+                  parkCanopyFilePath, buildingFilePath, srid, 
+                  canopy_cover_type, ground_cover_type, build_height,
+                  build_age, build_wwr, build_shutter, build_nat_ventil):
     """ Load input data and makes some few tests.
 
 		Parameters
@@ -411,14 +413,28 @@ def loadInputData(cursor, parkBoundaryFilePath, parkGroundFilePath,
 				A cursor object, used to perform queries        
             parkBoundaryFilePath: String
                 File path for park boundary input data
-            parkGroundFilePath: int
+            parkGroundFilePath: String
                 File path for park ground input data
-            parkCanopyFilePath: int
+            parkCanopyFilePath: String
                 File path for park canopy input data
-            buildingFilePath: int
+            buildingFilePath: String
                 File path for buildings input data
             srid: int
                 EPSG code that will be assigned to each input data
+            canopy_cover_type: string
+                Canopy cover type column name
+            ground_cover_type: string
+                Ground cover type column name
+            build_height: string
+                Building height column name
+            build_age: string
+                Building age column name
+            build_wwr: string
+                Building wind to wall ratio column name
+            build_shutter: string
+                Building shutter column name
+            build_nat_ventil: string
+                Building natural ventilation column name
         
 		Returns
 		_ _ _ _ _ _ _ _ _ _ 
@@ -464,9 +480,25 @@ def loadInputData(cursor, parkBoundaryFilePath, parkGroundFilePath,
                       srid = srid, 
                       srid_repro = None)
     
+    # Alter column names
+    dict_cols = {"TEMPO_PARK_CANOPY": {canopy_cover_type: TYPE},
+                 "TEMPO_PARK_GROUND": {ground_cover_type: TYPE},
+                 tempo_build: {build_height: HEIGHT_FIELD,
+                               build_age: BUILDING_AGE,
+                               build_wwr: BUILDING_WWR,
+                               build_shutter: BUILDING_SHUTTER,
+                               build_nat_ventil: BUILDING_NATURAL_VENT_RATE}}
+    for t in dict_cols.keys():
+        for old_col, new_col in dict_cols[t].items():
+            if old_col:
+                cursor.execute(
+                    f"""
+                    ALTER TABLE {t} RENAME COLUMN {old_col} TO {new_col};
+                    """)
+    
     return tempo_park_canopy, tempo_park_ground, tempo_build
-    
-    
+
+
 def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
                     build_height, build_age, build_wwr, build_shutter, build_nat_ventil,
                     default_build_height, default_build_age, 
@@ -739,7 +771,8 @@ def testInputData(cursor):
     cursor.execute(
         """
         SELECT ST_AREA(ST_UNION(ST_ACCUM(a.{0})))/ST_AREA(b.{0})
-        FROM {1} AS a, {2} AS b;
+        FROM {1} AS a, {2} AS b
+        GROUP BY b.{0};
         """.format( GEOM_FIELD           , PARK_GROUND,
                     PARK_BOUNDARIES_TAB))
     ground_to_park_ratio = cursor.fetchall()[0][0]
