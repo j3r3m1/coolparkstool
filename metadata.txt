@@ -22,6 +22,7 @@ repository=https://github.com/j3r3m1/coolparkstool
 hasProcessingProvider=yes
 # Uncomment the following line and add your changelog:
 changelog=
+    0.0.3   : Fix generic type name in ground and canopy covers
     0.0.2   : Add the unload function in the processing_coolparks.py file
     0.0.1   : First release. Experimental.
     
