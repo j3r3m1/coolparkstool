@@ -7,7 +7,7 @@ from . import loadData
 import string
 
 def creates_units_of_analysis(cursor, park_boundary_tab, srid,
-                                nCrossWindTot, wind_dir):
+                                nCrossWindTot, wind_dir, distance_max):
     """ Creates many units used for analysis:
             - the along-wind corridors used to average park characteristics
     and city morphology and organisation
@@ -27,6 +27,8 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
                 Number of cross-wind cells within the park
             wind_dir: float
                 wind direction (clock-wise, ° from North)
+            distance_max: float
+                Maximum distance where the park can have an impact outside its boundaries
         
 		Returns
 		_ _ _ _ _ _ _ _ _ _ 
@@ -39,8 +41,6 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
                 Name of the table used for grid calculation
             crosswind_line: String
                 Name of the table where are saved crosswind lines
-            distance_max: float
-                Maximum distance where the park can have an impact outside its boundaries
                 """    
     
     # Calculates the number of corridors inside the park
