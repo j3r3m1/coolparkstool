@@ -42,7 +42,7 @@ TEMPO_DIRECTORY = tempfile.gettempdir()
 
 
 # Superimposition threshold accepted in park canopy and park ground data
-SUPERIMP_THRESH = 0.
+SUPERIMP_THRESH = 0.05
 
 # Merge building geometries as block when closer than 'GEOMETRY_MERGE_TOLERANCE'
 GEOMETRY_MERGE_TOLERANCE = 0.05

@@ -131,7 +131,7 @@ def prepareData(plugin_directory,
                                              default_build_wwr = default_build_wwr,
                                              default_build_shutter = default_build_shutter,
                                              default_build_nat_ventil = default_build_nat_ventil)
-    
+
     # Test input data
     prep_fct.testInputData(cursor = cursor)
     

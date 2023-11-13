@@ -4,6 +4,8 @@ from .globalVariables import *
 from . import DataUtil
 from . import loadData
 
+from qgis.core import QgsProcessingException
+
 import string
 
 def creates_units_of_analysis(cursor, park_boundary_tab, srid,
@@ -130,10 +132,10 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
         """.format( GEOM_FIELD          , line_ini,
                     park_boundary_tab))
     Lpark = cursor.fetchall()[0][0]
+    Lpark = max(Lpark, distance_max)
     
     # Round this transect length to the upper multiple of corridor width
-    Lpark = np.ceil(Lpark / dx) * dx
-    Lpark = max(Lpark, distance_max)
+    Lpark = np.trunc(Lpark / dx) * dx
     
     # Calculation of the intersection between rectangles and park and rectangles and city
     cursor.execute(
@@ -747,11 +749,11 @@ def testInputData(cursor):
         SELECT COUNT(*) FROM {0}
         """.format(PARK_BOUNDARIES_TAB))
     nparks = cursor.fetchall()[0][0]
-    # A CONVERTIR EN ERREUR
     if nparks!=1:
-        print("""Verify your input data, there is {0} parks in your park_boundaries
-              input data whereas exactly one is needed !
-              """.format(nparks))
+        raise QgsProcessingException(f"""Verify your input data, there is {nparks} 
+                                     parks in your park_boundaries
+                                     input data whereas exactly one is needed !
+                                     """)
     
     # Test that there is only limited surface superimposition of two ground types or canopy types
     cursor.execute(
@@ -766,12 +768,12 @@ def testInputData(cursor):
         FROM {1};
         """.format(GEOM_FIELD                   , PARK_GROUND))
     ground_duplic = cursor.fetchall()[0][0]
-    
-    # A CONVERTIR EN ERREUR
     if canopy_duplic > SUPERIMP_THRESH or ground_duplic > SUPERIMP_THRESH:
-        print("""Verify your input data, there is about {0} % superimposition in
-              the canopy layer and {1} % in the ground layer
-              """.format(str(int(canopy_duplic*100)), str(int(ground_duplic*100))))
+        raise QgsProcessingException(f"""Verify your input data, there is about 
+                                     {str(int(canopy_duplic*100))} % superimposition in
+                                     the canopy layer and {str(int(ground_duplic*100))} %
+                                     in the ground layer
+                                     """)
     
     # Test that the park ground covers almost entirely the park
     cursor.execute(
@@ -782,13 +784,14 @@ def testInputData(cursor):
         """.format( GEOM_FIELD           , PARK_GROUND,
                     PARK_BOUNDARIES_TAB))
     ground_to_park_ratio = cursor.fetchall()[0][0]
-    # A CONVERTIR EN ERREUR
     if ground_to_park_ratio < GROUND_TO_PARK_RATIO:
-        print("""Verify your input data, there is only {0} % of your ground data
-              that covers your park within its boundaries (> {1} % needed
-              """.format(str(int(ground_to_park_ratio*100)), str(int(GROUND_TO_PARK_RATIO*100))))       
+        raise QgsProcessingException(f"""Verify your input data, there is 
+                                     only {str(int(ground_to_park_ratio*100))} % 
+                                     of your ground data that covers your park
+                                     within its boundaries 
+                                     (> {str(int(GROUND_TO_PARK_RATIO*100))} % needed
+                                      """)    
     
-            
 
 def calc_park_fractions(cursor, rect_park, ground_cover, canopy_cover, wind_dir):            
     """ Calculates for each park corridor in a given direction the park
