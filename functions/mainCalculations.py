@@ -195,7 +195,8 @@ def prepareData(plugin_directory,
                                                park_boundary_tab = dicRotatedTables[PARK_BOUNDARIES_TAB],
                                                srid = srid, 
                                                nCrossWindTot = nCrossWind,
-                                               wind_dir = d)
+                                               wind_dir = d,
+                                               distance_max = distance_max)
         
         # ----------------------------------------------------------------------
         # 4. CALCULATES FRACTION OF EACH COMBINATION OF GROUND / CANOPY TYPES

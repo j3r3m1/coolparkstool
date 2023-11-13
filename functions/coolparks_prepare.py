@@ -38,7 +38,10 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
             grid: String
                 Name of the table used for grid calculation
             crosswind_line: String
-                Name of the table where are saved crosswind lines"""    
+                Name of the table where are saved crosswind lines
+            distance_max: float
+                Maximum distance where the park can have an impact outside its boundaries
+                """    
     
     # Calculates the number of corridors inside the park
     nCrossWind = int(nCrossWindTot / 3)
@@ -130,6 +133,7 @@ def creates_units_of_analysis(cursor, park_boundary_tab, srid,
     
     # Round this transect length to the upper multiple of corridor width
     Lpark = np.ceil(Lpark / dx) * dx
+    Lpark = max(Lpark, distance_max)
     
     # Calculation of the intersection between rectangles and park and rectangles and city
     cursor.execute(
@@ -543,7 +547,8 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
 		Returns
 		_ _ _ _ _ _ _ _ _ _ 
 
-            None """    
+            distance_max: float
+                Maximum distance where the park can have an impact outside its boundaries"""    
     # Explode the potential multipolygons in canopy and ground park data and replace string types by numbers
     sql_ctype_conv = ["WHEN {0} = ''{1}'' THEN {2} ".format(TYPE,
                                                             S_CANOPY[i],
@@ -604,6 +609,7 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
         FROM {PARK_BOUNDARIES_TAB}
         """)
     distance_max = cursor.fetchall()[0][0]
+    distance_max = max(distance_max, MIN_PARK_BUFFER_DIST)
     cursor.execute(
         f"""
         DROP TABLE IF EXISTS TEMPO_BUILDING_1;

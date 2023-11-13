@@ -75,6 +75,9 @@ CROSSWIND_LINE_DIST = 8
 # Number of wind directions
 N_DIRECTIONS = 8
 
+# Minimum distance used to consider the maximum cooling
+MIN_PARK_BUFFER_DIST = 250
+
 # Default values for distance to park entrance and outputs
 DEFAULT_D_PARK_INPUT = -999
 DEFAULT_D_PARK_OUTPUT = -999
