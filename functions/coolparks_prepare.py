@@ -758,13 +758,13 @@ def testInputData(cursor):
     # Test that there is only limited surface superimposition of two ground types or canopy types
     cursor.execute(
         """
-        SELECT 1-ST_AREA(ST_ACCUM({0}))/ST_AREA(ST_UNION(ST_ACCUM({0}))) AS F
+        SELECT ST_AREA(ST_ACCUM({0}))/ST_AREA(ST_UNION(ST_ACCUM({0})))-1 AS F
         FROM {1};
         """.format(GEOM_FIELD                   , PARK_CANOPY))
     canopy_duplic = cursor.fetchall()[0][0]
     cursor.execute(
         """
-        SELECT 1-ST_AREA(ST_ACCUM({0}))/ST_AREA(ST_UNION(ST_ACCUM({0}))) AS F
+        SELECT ST_AREA(ST_ACCUM({0}))/ST_AREA(ST_UNION(ST_ACCUM({0})))-1 AS F
         FROM {1};
         """.format(GEOM_FIELD                   , PARK_GROUND))
     ground_duplic = cursor.fetchall()[0][0]
