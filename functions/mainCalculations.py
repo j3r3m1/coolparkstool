@@ -362,8 +362,9 @@ def calcParkInfluence(weatherFilePath,
                              rh: RH, 
                              pa: P_ATMO}, inplace = True)
     
-    # Consider that the datetime index are UTC
-    df_met.index = df_met.index.tz_convert(None)
+    # Consider that the datetime index are local time
+    #utc = int(pd.read_csv(weatherFilePath, nrows = 1, header = 6).columns[0].split(":")[1])
+    df_met.index = df_met.index.tz_localize(None)
 
     # For each time period (day - 0PM - and night - 11 PM)
     output_t_path = {}

@@ -778,8 +778,9 @@ def testInputData(cursor):
     # Test that the park ground covers almost entirely the park
     cursor.execute(
         """
-        SELECT ST_AREA(ST_UNION(ST_ACCUM(a.{0})))/ST_AREA(b.{0})
+        SELECT ST_AREA(ST_UNION(ST_ACCUM(ST_INTERSECTION(a.{0}, b.{0}))))/ST_AREA(b.{0})
         FROM {1} AS a, {2} AS b
+        WHERE a.{0} && b.{0} AND ST_INTERSECTS(a.{0}, b.{0})
         GROUP BY b.{0};
         """.format( GEOM_FIELD           , PARK_GROUND,
                     PARK_BOUNDARIES_TAB))

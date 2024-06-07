@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['functions/mainCalculations.py', 'functions/globalVariables.py', '../coolparkstool_test.py', 'functions/coolparks_calc.py', 'functions/H2gisConnection.py', 'functions/Obstacles.py', 'functions/regression_functions.py', 'functions/saveData.py', 'functions/coolparks_postprocess.py', 'postprocessing_algorithm.py', 'functions/loadData.py', 'metadata.txt', 'preprocessing_algorithm.py', 'processing_algorithm.py', 'functions/create_transport_models.py', '../../../Documents/CloudS/ZaclysOnlyOffice/Boulot/Projets/COOLPARKS/Production/Jeremy/Cas_application/compare_results.py', '../../../Documents/CloudS/ZaclysOnlyOffice/Boulot/Articles/URock/inputs/PALM/create_wind_profile.py', '../../../Documents/CloudS/ZaclysOnlyOffice/Boulot/Enseignement/Universite_Bourgogne/scriptsPython/Average_Mustard_temp.py']
+recent_files = ['functions/mainCalculations.py', 'functions/globalVariables.py', '../coolparkstool_test.py', 'functions/coolparks_calc.py', 'functions/H2gisConnection.py', 'functions/Obstacles.py', 'functions/regression_functions.py', 'functions/saveData.py', 'functions/coolparks_postprocess.py', 'postprocessing_algorithm.py', 'functions/loadData.py', 'metadata.txt', 'preprocessing_algorithm.py', 'functions/coolparks_prepare.py']
 
 [main]
 version = 0.2.0
