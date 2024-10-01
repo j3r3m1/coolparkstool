@@ -1,0 +1,4 @@
+jaydebeapi
+ordereddict
+statsmodels
+Unidecode
