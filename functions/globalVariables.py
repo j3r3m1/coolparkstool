@@ -301,8 +301,8 @@ coef_var_correspondance = \
 BASIC_COOLING = -0.11
 
 # Dates used for calculation
-START_DATE = "01/06"
-END_DATE = "30/09"
+START_DATE = "01/01"
+END_DATE = "30/12"
 
 # Generic names for meteorological variables
 WDIR = "wdir"

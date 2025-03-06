@@ -19,6 +19,7 @@ from shapely.geometry import Polygon
 from qgis.core import QgsCoordinateReferenceSystem, QgsProcessingException
 from qgis.analysis import QgsNativeAlgorithms
 from osgeo import gdal
+import pytz
 
 from . import coolparks_prepare as prep_fct
 from . import coolparks_calc as calc_fct
@@ -344,11 +345,17 @@ def calcParkInfluence(weatherFilePath,
                                 axis = 1, 
                                 inplace = True)
 
-    # Read date and select only useful dates and times for analysis
+    # Read meteorological data and set the right datetime index UTC info
     df_met = pd.read_csv(weatherFilePath, 
                          skiprows = 11, 
-                         index_col = 1, 
+                         index_col = 0, 
                          parse_dates = True)[[wdir, wspeed, tair, rh, pa]]
+    
+    # Consider that the datetime index are local time
+    utc = int(pd.read_csv(weatherFilePath, nrows = 1, header = 6).columns[0].split(":")[1])
+    df_met.index = df_met.index.tz_localize(pytz.FixedOffset(utc * 60)).tz_convert("UTC")
+    
+    # Select only useful dates and times for analysis
     year = df_met.index.year.unique()[0]
     start_day = int(START_DATE.split("/")[0])
     start_month = int(START_DATE.split("/")[1])
@@ -361,10 +368,6 @@ def calcParkInfluence(weatherFilePath,
                              tair: T_AIR, 
                              rh: RH, 
                              pa: P_ATMO}, inplace = True)
-    
-    # Consider that the datetime index are local time
-    #utc = int(pd.read_csv(weatherFilePath, nrows = 1, header = 6).columns[0].split(":")[1])
-    df_met.index = df_met.index.tz_localize(None)
 
     # For each time period (day - 0PM - and night - 11 PM)
     output_t_path = {}
@@ -389,7 +392,8 @@ def calcParkInfluence(weatherFilePath,
         
         selected_dates = pd.date_range(start = datetime.datetime(year, start_month, start_day, tp),
                                        end = datetime.datetime(year, end_month, end_day),
-                                       freq = pd.offsets.Day(1))
+                                       freq = pd.offsets.Day(1),
+                                       tz = pytz.FixedOffset(utc *60))
         df_met_sel = df_met.reindex(selected_dates).dropna()
         
         # Calculates the DPV
@@ -403,12 +407,10 @@ def calcParkInfluence(weatherFilePath,
                                                 value_min = COOLING_FACTORS[tp].loc["min","dpv"], 
                                                 value_max = COOLING_FACTORS[tp].loc["max","dpv"])
         
-        
         # For each day, sum the effect of the park on the air temperature
         # (sum on a different grid depending on wind direction)
         for d in df_met_sel.index:
             wd = df_met_sel.loc[d, WDIR]
-            print(wd)
             wd_range = [i for i in dirs if (wd >= i and wd < i + 360./ndir)][0]
             weights[wd_range] += 1
             
