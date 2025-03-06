@@ -64,6 +64,10 @@ Quelle que soit la solution choisie, vous devez maintenant avoir QGIS ouvert dan
 
 ![image](https://github.com/j3r3m1/coolparkstool/assets/13120405/20b24f01-5c53-48ae-91ba-0c8884f7d78f)
 
+## Utilisation
+Une fois installé, CoolParksTool est prêt à être utilisé. Il vous faut maintenant préparer les données géographiques et météorologiques nécessaires à son fonctionnement. Il n'existe pour l'instant pas de méthodologie de mise en oeuvre "Pas à pas". Cependant, vous pouvez vous reporter au [rapport final de CoolParks](https://librairie.ademe.fr/6997-projet-de-recherche-coolparks.html) dans lequel les fichiers d'entrée et de sortie du plug-in sont décrits, ainsi que son fonctionnement (reportez-vous à la section dédiée au plug-in - section 5 - p. 96).
+
+
  
 ## Acknowledgements
 This work has been performed within the research project CoolParks co-funded by the French Agency ADEME (grant number 1917C0002).
