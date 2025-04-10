@@ -57,7 +57,15 @@ Pour l’utiliser :
     - lancez QGIS via le terminal en tapant : qgis
 
 ### Installer CoolParksTool
-Quelle que soit la solution choisie, vous devez maintenant avoir QGIS ouvert dans un environnement propice au bon fonctionnement de CoolParksTool. Pour installer ce dernier, il suffit maintenant :
+Quelle que soit la solution choisie, vous devez maintenant avoir QGIS ouvert dans un environnement propice au bon fonctionnement de CoolParksTool. Pour installer ce dernier, deux solutions existent:
+#### Installer la dernière version disponible sur le dépôt GitHub
+C'est la dernière version du code qui n'a peut-être pas encore été envoyée dans les dépôts de QGIS. Elle n'est peut-être pas parfaitement fonctionnelle mais règle des problèmes rencontrés par les précédentes versions. C'est la version recommandée. Pour l'installer, télécharger [le zip du projet](https://github.com/j3r3m1/coolparkstool/archive/refs/heads/main.zip) puis:
+- de lancer QGIS, d'ouvrir la fenêtre "Installer/Gérer les extensions" du menu "Extensions".
+- Sélectionner "Installer depuis un zip" dans le ruban de gauche puis sélectionner le zip que vous avez téléchargé et installer le.
+- un message sur fond vers vous informant du succès de l'installation doit normalement apparaître temporairement. Lorsque vous ouvrez la boîte à outil de QGIS, le plug-in CoolParks tool doit maintenant apparaître (cf. Figure ci-dessous)
+
+#### Installer la dernière version proposée par QGIS
+Il suffit :
 - de lancer QGIS, d'ouvrir la fenêtre "Installer/Gérer les extensions" du menu "Extensions".
 - dans "Paramètres" (ruban de droite de la fenêtre), cocher la case "Afficher les extensions expérimentales". Vous pouvez maintenant rechercher puis sélectionner "coolparkstool" puis cliquer sur "Installer le plugin".
 - un message sur fond vers vous informant du succès de l'installation doit normalement apparaître temporairement. Lorsque vous ouvrez la boîte à outil de QGIS, le plug-in CoolParks tool doit maintenant apparaître (cf. Figure ci-dessous)
