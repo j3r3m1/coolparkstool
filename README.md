@@ -73,8 +73,17 @@ Il suffit :
 ![image](https://github.com/j3r3m1/coolparkstool/assets/13120405/20b24f01-5c53-48ae-91ba-0c8884f7d78f)
 
 ## Utilisation
-Une fois installé, CoolParksTool est prêt à être utilisé. Il vous faut maintenant préparer les données géographiques et météorologiques nécessaires à son fonctionnement. Il n'existe pour l'instant pas de méthodologie de mise en oeuvre "Pas à pas". Cependant, vous pouvez vous reporter au [rapport final de CoolParks](https://librairie.ademe.fr/6997-projet-de-recherche-coolparks.html) dans lequel les fichiers d'entrée et de sortie du plug-in sont décrits, ainsi que son fonctionnement (reportez-vous à la section dédiée au plug-in - section 5 - p. 96).
-
+Une fois installé, CoolParksTool est prêt à être utilisé. Il vous faut maintenant préparer les données géographiques (4 couches SIG) et météorologiques (un fichier météo) nécessaires à son fonctionnement. Il n'existe pour l'instant pas de méthodologie de mise en oeuvre "Pas à pas". Cependant, vous pouvez :
+- vous reporter au [rapport final de CoolParks](https://librairie.ademe.fr/6997-projet-de-recherche-coolparks.html) et plus spécifiquement la section dédiée au plug-in (section 5 - p. 96) dans lequel :
+    - les fichiers d'entrée et de sortie du plug-in sont décrits,
+    - le fonctionnement de l'outil est décrit.
+- télécharger le [jeu de données test](https://github.com/j3r3m1/coolparkstool/tree/main/test/data/cas_atelier) :
+    - couches SIG décrivant la géographie du parc et son environnement :
+        - "SIG-données15parcs/limites_parcs.geojson" : fichier identifiant les limites du parc
+        - "SIG-données15parcs/Cas 0/cas_0_batiments.geojson" : les bâtiments alentour au parc
+        - "SIG-données15parcs/Cas 0/cas_0_couverture_arboree.geojson" : la description de la couverture arborée du parc
+        - "SIG-données15parcs/Cas 0/cas_0_couverture_sol.geojson" : la description de la couverture du sol
+    - fichier Météo issu du site [Shinyweather](https://www.shinyweatherdata.com/) : "Donnees_meteo.csv"
 
  
 ## Acknowledgements
