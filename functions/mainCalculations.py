@@ -412,6 +412,9 @@ def calcParkInfluence(weatherFilePath,
         for d in df_met_sel.index:
             wd = df_met_sel.loc[d, WDIR]
             wd_range = [i for i in dirs if (wd >= i and wd < i + 360./ndir)][0]
+            print(wd_range)
+            if wd_range == 45:
+                print("ok")
             weights[wd_range] += 1
             
             grid_sum_tair[wd_range], grid_sum_deltatair[wd_range] = \

@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['../../../.config/spyder-py3/temp.py']
+recent_files = ['../target_test/Data/Nantes/TARGET/config.ini', '../../../miniforge3/envs/umep_qgis/lib/python3.12/site-packages/target_py/ui/utils.py', '../../../.config/spyder-py3/temp.py', '../coolparkstool_test.py', 'functions/mainCalculations.py', 'functions/coolparks_calc.py', 'metadata.txt', 'processing_coolparks_provider.py', '../../../Documents/CloudS/ZaclysOnlyOffice/Boulot/Articles/Height_comparison/Extract_zones.py', '../../../Documents/CloudS/ZaclysOnlyOffice/Boulot/Enseignement/Universite_Bourgogne/2024-2025/Dossier_partage/scriptsPython/Convert_Mapuce_to_GIS.py', '../../../Documents/CloudS/ZaclysOnlyOffice/Boulot/Enseignement/Universite_Bourgogne/2024-2025/Dossier_partage/scriptsPython/Utils.py', 'processing_algorithm.py']
 
 [main]
 version = 0.2.0

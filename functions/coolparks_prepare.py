@@ -626,7 +626,11 @@ def modifyInputData(cursor, tempo_park_canopy, tempo_park_ground, tempo_build,
     
     # Fill missing building info with default values
     if build_height and build_height != "":
-        sql_height = f"COALESCE({build_height}, {default_build_height})"
+        sql_height = f"""COALESCE(CASE WHEN {build_height} < {BUILDING_DEFAULT_FLOOR_HEIGHT}
+                                        THEN {BUILDING_DEFAULT_FLOOR_HEIGHT}
+                                        ELSE {build_height}
+                                        END,
+                                    {default_build_height})"""
     else:
         sql_height = f"{default_build_height}"
     if build_age and build_age != "":

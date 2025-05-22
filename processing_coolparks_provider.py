@@ -107,4 +107,4 @@ class ProcessingCoolParksProvider(QgsProcessingProvider):
         (version 2.2.1)". This string should be localised. The default
         implementation returns the same string as name().
         """
-        return 'CoolParksTool, Version 0.0.4'
+        return 'CoolParksTool, Version 0.0.5'

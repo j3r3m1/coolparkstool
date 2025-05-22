@@ -6,7 +6,7 @@
 name=CoolParksTool
 qgisMinimumVersion=3.0
 description=This plugin evaluates the cooling effect of a park and its impact on buildings energy and thermal comfort
-version=0.0.4
+version=0.0.5
 author=Jeremy Bernard
 email=jeremy.bernard@zaclys.net
 
@@ -22,6 +22,7 @@ repository=https://github.com/j3r3m1/coolparkstool
 hasProcessingProvider=yes
 # Uncomment the following line and add your changelog:
 changelog=
+    0.0.5   : Issue with building lower than 0.5 m --> set to 3 m
     0.0.4   : Fix time zone problems using the UTC offset in the meteo file (fix issue #9)
     0.0.3   : Fix generic type name in ground and canopy covers
     0.0.2   : Add the unload function in the processing_coolparks.py file
